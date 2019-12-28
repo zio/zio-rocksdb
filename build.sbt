@@ -1,5 +1,5 @@
 val mainScala = "2.12.10"
-val allScala  = Seq("2.11.12", mainScala)
+val allScala  = Seq(mainScala, "2.13.1")
 
 inThisBuild(
   List(
@@ -40,11 +40,11 @@ buildInfoPackage := "zio.rocksdb"
 buildInfoObject := "BuildInfo"
 
 libraryDependencies ++= Seq(
-  "dev.zio"     %% "zio-streams"  % "1.0.0-RC17",
-  "dev.zio"     %% "zio-test"     % "1.0.0-RC17" % "test",
-  "dev.zio"     %% "zio-test-sbt" % "1.0.0-RC17" % "test",
-  "org.rocksdb" % "rocksdbjni"    % "6.4.6",
-  compilerPlugin("org.typelevel" %% "kind-projector" % "0.10.0")
+  "dev.zio"                %% "zio-streams"             % "1.0.0-RC17",
+  "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.3",
+  "dev.zio"                %% "zio-test"                % "1.0.0-RC17" % "test",
+  "dev.zio"                %% "zio-test-sbt"            % "1.0.0-RC17" % "test",
+  "org.rocksdb"            % "rocksdbjni"               % "6.4.6"
 )
 
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")

@@ -1,15 +1,15 @@
 package zio.rocksdb
 
+import java.io.File
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Path }
 
+import org.rocksdb.Options
 import zio.{ Managed, Task, UIO }
 import zio.test._
 import zio.test.Assertion._
 
-import scala.collection.JavaConverters._
-import java.io.File
-import org.rocksdb.Options
-import java.nio.charset.StandardCharsets.UTF_8
+import scala.jdk.CollectionConverters._
 
 object Utils {
   def tempDir: Managed[Throwable, Path] =

@@ -5,7 +5,7 @@ import org.{ rocksdb => jrocks }
 import zio._
 import zio.stream._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class RocksDB(db: jrocks.RocksDB) {
   def delete(key: Array[Byte]) =
