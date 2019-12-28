@@ -7,7 +7,7 @@ import zio.stream._
 
 import scala.collection.JavaConverters._
 
-case class RocksDB(db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) {
+case class RocksDB(db: jrocks.RocksDB) {
   def delete(key: Array[Byte]) =
     Task(db.delete(key))
 
@@ -29,33 +29,30 @@ case class RocksDB(db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle
       db.multiGetAsList(handles.asJava, keys.asJava).asScala.toList.map(Option(_))
     }
 
+  private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
+    ZStream.fromEffect(Task(it.seekToFirst())).drain ++
+      ZStream.fromEffect(Task(it.isValid())).flatMap { valid =>
+        if (!valid) ZStream.empty
+        else
+          ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.fromPull {
+            Task {
+              it.next()
+
+              if (!it.isValid()) ZIO.fail(None)
+              else UIO(it.key() -> it.value())
+            }.mapError(Some(_)).flatten
+          }
+      }
+
   def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
     ZStream
       .bracket(Task(db.newIterator()))(it => UIO(it.close()))
-      .flatMap { it =>
-        ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-          convertIterator(it)
-      }
-
-  private def convertIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-    ZStream.fromPull {
-      Task {
-        if (!it.isValid()) ZIO.fail(None)
-        else
-          UIO {
-            it.next()
-            it.key() -> it.value()
-          }
-      }.mapError(Some(_)).flatten
-    }
+      .flatMap(drainIterator)
 
   def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
     ZStream
       .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
-      .flatMap { it =>
-        ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-          convertIterator(it)
-      }
+      .flatMap(drainIterator)
 
   def newIterators(
     cfHandles: List[jrocks.ColumnFamilyHandle]
@@ -64,10 +61,7 @@ case class RocksDB(db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle
       .bracket(Task(db.newIterators(cfHandles.asJava)))(its => UIO.foreach(its.asScala)(it => UIO(it.close())))
       .flatMap { its =>
         ZStream.fromIterable {
-          cfHandles.zip(its.asScala.toList.map { it =>
-            ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-              convertIterator(it)
-          })
+          cfHandles.zip(its.asScala.toList.map(drainIterator))
         }
       }
 
@@ -81,17 +75,23 @@ case class RocksDB(db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle
 }
 
 object RocksDB {
-  def make(
+  def open(
     options: jrocks.DBOptions,
     path: String,
     cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-  ): Managed[Throwable, RocksDB] =
+  ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] =
     Task {
       val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
       val db      = jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles)
 
-      new RocksDB(db, handles.asScala.toList)
-    }.toManaged(_.close)
+      (new RocksDB(db), handles.asScala.toList)
+    }.toManaged(_._1.close)
+
+  def open(path: String) =
+    Task(new RocksDB(jrocks.RocksDB.open(path))).toManaged(_.close)
+
+  def open(options: jrocks.Options, path: String) =
+    Task(new RocksDB(jrocks.RocksDB.open(options, path))).toManaged(_.close)
 
   def listColumnFamilies(options: jrocks.Options, path: String) =
     Task(jrocks.RocksDB.listColumnFamilies(options, path))
