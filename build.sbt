@@ -40,10 +40,10 @@ buildInfoPackage := "zio.rocksdb"
 buildInfoObject := "BuildInfo"
 
 libraryDependencies ++= Seq(
-  "dev.zio"          %% "zio-streams"  % "1.0.0-RC17",
-  "dev.zio"          %% "zio-test"     % "1.0.0-RC17" % "test",
-  "dev.zio"          %% "zio-test-sbt" % "1.0.0-RC17" % "test",
-  "org.rocksdb"      % "rocksdbjni"    % "6.4.6",
+  "dev.zio"     %% "zio-streams"  % "1.0.0-RC17",
+  "dev.zio"     %% "zio-test"     % "1.0.0-RC17" % "test",
+  "dev.zio"     %% "zio-test-sbt" % "1.0.0-RC17" % "test",
+  "org.rocksdb" % "rocksdbjni"    % "6.4.6",
   compilerPlugin("org.typelevel" %% "kind-projector" % "0.10.0")
 )
 
