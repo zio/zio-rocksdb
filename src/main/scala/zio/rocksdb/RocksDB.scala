@@ -123,10 +123,10 @@ object RocksDB {
         (withDB(db), handles.asScala.toList)
       }.toManaged(_._1.rocksDB.close)
 
-    def open(path: String) =
+    def open(path: String): Managed[Throwable, RocksDB[Any]] =
       Task(withDB(jrocks.RocksDB.open(path))).toManaged(_.rocksDB.close)
 
-    def open(options: jrocks.Options, path: String) =
+    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB[Any]] =
       Task(withDB(jrocks.RocksDB.open(options, path))).toManaged(_.rocksDB.close)
 
     private def withDB(db: jrocks.RocksDB): RocksDB[Any] =
