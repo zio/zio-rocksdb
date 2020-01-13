@@ -111,6 +111,9 @@ object RocksDB {
   }
 
   object Live {
+    def listColumnFamilies(options: jrocks.Options, path: String): Task[List[Array[Byte]]] =
+      Task(jrocks.RocksDB.listColumnFamilies(options, path).asScala.toList)
+
     def open(
       options: jrocks.DBOptions,
       path: String,
@@ -133,8 +136,5 @@ object RocksDB {
       new RocksDB[Any] {
         override val rocksDB: Service[Any] = new RocksDB.Live(db)
       }
-
-    def listColumnFamilies(options: jrocks.Options, path: String) =
-      Task(jrocks.RocksDB.listColumnFamilies(options, path))
   }
 }
