@@ -26,11 +26,11 @@ object Utils {
       }
     }
 
-  def tempDB: Managed[Throwable, RocksDB] = {
+  def tempDB: Managed[Throwable, RocksDB[Any]] = {
     val opts = new Options().setCreateIfMissing(true)
 
     Utils.tempDir
-      .flatMap(p => RocksDB.open(opts, p.toAbsolutePath.toString))
+      .flatMap(p => RocksDB.Live.open(opts, p.toAbsolutePath.toString))
 
   }
 }
@@ -43,9 +43,11 @@ object RocksDBSpec
           val value = "value".getBytes(UTF_8)
 
           Utils.tempDB.use { db =>
+            val rdb = db.rocksDB
+
             for {
-              _      <- db.put(key, value)
-              result <- db.get(key)
+              _      <- rdb.put(key, value)
+              result <- rdb.get(key)
             } yield assert(result, isSome(equalTo(value)))
           }
         },
@@ -54,25 +56,25 @@ object RocksDBSpec
           val value = "value".getBytes(UTF_8)
 
           Utils.tempDB.use { db =>
+            val rdb = db.rocksDB
+
             for {
-              _      <- db.put(key, value)
-              before <- db.get(key)
-              _      <- db.delete(key)
-              after  <- db.get(key)
+              _      <- rdb.put(key, value)
+              before <- rdb.get(key)
+              _      <- rdb.delete(key)
+              after  <- rdb.get(key)
             } yield assert(before, isSome(equalTo(value))) && assert(after, isNone)
           }
         },
         testM("newIterator") {
           Utils.tempDB.use { db =>
+            val rdb  = db.rocksDB
             val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
+
             for {
-              _ <- Task.foreach(data) {
-                    case (k, v) => db.put(k.getBytes(UTF_8), v.getBytes(UTF_8))
-                  }
-              results <- db.newIterator.runCollect
-              resultsStr = results.map {
-                case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8)
-              }
+              _          <- Task.foreach(data) { case (k, v) => rdb.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+              results    <- rdb.newIterator.runCollect
+              resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
             } yield assert(resultsStr, hasSameElements(data))
           }
         }
