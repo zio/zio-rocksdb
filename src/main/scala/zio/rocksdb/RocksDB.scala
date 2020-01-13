@@ -7,8 +7,8 @@ import zio.stream._
 
 import scala.jdk.CollectionConverters._
 
-trait RocksDB[R] {
-  val rocksDB: RocksDB.Service[R]
+trait RocksDB {
+  val rocksDB: RocksDB.Service[Any]
 }
 
 object RocksDB {
@@ -33,7 +33,7 @@ object RocksDB {
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
-    ): ZStream[R, Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])]
+    ): ZStream[R, Throwable, (jrocks.ColumnFamilyHandle, ZStream[R, Throwable, (Array[Byte], Array[Byte])])]
 
     def put(key: Array[Byte], value: Array[Byte]): RIO[R, Unit]
 
@@ -118,7 +118,7 @@ object RocksDB {
       options: jrocks.DBOptions,
       path: String,
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-    ): Managed[Throwable, (RocksDB[Any], List[jrocks.ColumnFamilyHandle])] =
+    ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] =
       Task {
         val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
         val db      = jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles)
@@ -126,15 +126,15 @@ object RocksDB {
         (withDB(db), handles.asScala.toList)
       }.toManaged(_._1.rocksDB.close)
 
-    def open(path: String): Managed[Throwable, RocksDB[Any]] =
+    def open(path: String): Managed[Throwable, RocksDB] =
       Task(withDB(jrocks.RocksDB.open(path))).toManaged(_.rocksDB.close)
 
-    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB[Any]] =
+    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB] =
       Task(withDB(jrocks.RocksDB.open(options, path))).toManaged(_.rocksDB.close)
 
-    private def withDB(db: jrocks.RocksDB): RocksDB[Any] =
-      new RocksDB[Any] {
-        override val rocksDB: Service[Any] = new RocksDB.Live(db)
+    private def withDB(db: jrocks.RocksDB): RocksDB =
+      new RocksDB {
+        val rocksDB: Service[Any] = new RocksDB.Live(db)
       }
   }
 }
