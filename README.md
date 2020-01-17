@@ -16,23 +16,22 @@ libraryDependencies ++= Seq(
 
 Use the provided `RocksDB` wrapper:
 ```scala
+import zio.rocksdb
 import zio.rocksdb.RocksDB
+import java.nio.charset.StandardCharsets
 
-val result: Task[Option[Array[Byte]]] = 
-  RocksDB.open("/data/state").use { db =>
-    val key   = "key".getBytes(UTF_8)
-    val value = "value".getBytes(UTF_8)
-  
-    for {
-      _      <- db.put(key, value)
-      result <- db.get(key)
-    } yield result
-  }
+val key   = "key".getBytes(StandardCharsets.UTF_8)
+val value = "value".getBytes(StandardCharsets.UTF_8)
+
+val readWrite =
+  for {
+    _      <- rocksdb.put(key, value)
+    result <- rocksdb.get(key)
+  } yield result
+
+val result: Task[Option[Array[Byte]]] =
+  readWrite.provideManaged(RocksDB.Live.open("/data/state"))
 ```
-
-If you need a method which is not wrapped by the library, you can
-access the underlying `org.rocksdb.RocksDB` instance using the
-`RocksDB#db` field. Make sure to wrap all method calls with `zio.Task`!
 
 ## Getting help
 
