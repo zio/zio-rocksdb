@@ -13,7 +13,7 @@ trait Serializer[-R, -A] { self =>
       def apply(b: B): URIO[R, Bytes] = self(f(b))
     }
 
-  final def zipWith[B, C](that: Serializer[R, C])(f: B => (A, C)): Serializer[R, B] =
+  final def divideWith[B, C](that: Serializer[R, C])(f: B => (A, C)): Serializer[R, B] =
     new Serializer[R, B] {
       def apply(b: B): URIO[R, Bytes] = {
         val (a, c) = f(b)
@@ -21,7 +21,7 @@ trait Serializer[-R, -A] { self =>
       }
     }
 
-  final def zip[B](that: Serializer[R, B]): Serializer[R, (A, B)] = zipWith(identity[(A, B)])(that)
+  final def divide[B](that: Serializer[R, B]): Serializer[R, (A, B)] = divideWith(that)(identity[(A, B)])
 
   final def chooseWith[B, C](that: Serializer[R, C])(f: B => Either[A, C]): Serializer[R, B] =
     new Serializer[R, B] {
@@ -29,7 +29,7 @@ trait Serializer[-R, -A] { self =>
         f(b).fold(self.apply, that.apply)
     }
 
-  final def choose[B](that: Serializer[R, B]): Serializer[R, Either[A, B]] = chooseWith(identity[Either[A, B]])(that)
+  final def choose[B](that: Serializer[R, B]): Serializer[R, Either[A, B]] = chooseWith(that)(identity[Either[A, B]])
 }
 
 object Serializer extends CollectionSerializers {
