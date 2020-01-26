@@ -96,10 +96,12 @@ private[rocksdb] trait PrimitiveSerializers extends SerializerUtilityFunctions {
 private[rocksdb] trait SerializerUtilityFunctions {
   private[rocksdb] def fromByteBuffer[A](n0: Int, mutate: (ByteBuffer, A) => Any): Serializer[Any, A] =
     new Serializer[Any, A] {
+      var buf: ByteBuffer = null
       def apply(a: A): UIO[Bytes] = {
         val n = n0 max 1
         for {
-          buf <- URIO.effectTotal(ByteBuffer.allocate(n))
+          _ <- URIO.effectTotal { buf = ByteBuffer.allocate(n) }.when(buf eq null)
+          _ <- URIO.effectTotal(buf.position(0))
           _   <- URIO.effectTotal(mutate(buf, a))
           chk <- URIO.effectTotal(Chunk.fromArray(buf.array))
         } yield chk
