@@ -99,12 +99,13 @@ private[rocksdb] trait SerializerUtilityFunctions {
       var buf: ByteBuffer = null
       def apply(a: A): UIO[Bytes] = {
         val n = n0 max 1
-        for {
-          _ <- URIO.effectTotal { buf = ByteBuffer.allocate(n) }.when(buf eq null)
-          _ <- URIO.effectTotal(buf.position(0))
-          _   <- URIO.effectTotal(mutate(buf, a))
-          chk <- URIO.effectTotal(Chunk.fromArray(buf.array))
-        } yield chk
+        URIO { 
+          if (buf eq null)
+            buf = ByteBuffer.allocate(n)
+          buf.position(0)
+          mutate(buf, a)
+          Chunk.fromArray(buf.array)
+        }
       }
     }
 }
