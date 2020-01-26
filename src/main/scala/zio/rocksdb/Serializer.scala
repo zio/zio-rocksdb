@@ -23,7 +23,7 @@ trait Serializer[-R, -A] { self =>
 
   final def zip[B](that: Serializer[R, B]): Serializer[R, (A, B)] = zipWith(identity[(A, B)])(that)
 
-  final def chooseWith[B, C](f: B => Either[A, C])(that: Serializer[R, C]): Serializer[R, B] =
+  final def chooseWith[B, C](that: Serializer[R, C])(f: B => Either[A, C]): Serializer[R, B] =
     new Serializer[R, B] {
       def apply(b: B): URIO[R, Bytes] =
         f(b).fold(self.apply, that.apply)
