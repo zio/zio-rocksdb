@@ -1,6 +1,6 @@
 package zio.rocksdb
 
-import _root_.zio.{ Chunk, URIO, UIO }
+import zio.{ Chunk, URIO, UIO }
 import java.{ lang => jlang }
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
