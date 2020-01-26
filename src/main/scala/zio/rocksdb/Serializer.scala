@@ -13,7 +13,7 @@ trait Serializer[-R, -A] { self =>
       def apply(b: B): URIO[R, Bytes] = self(f(b))
     }
 
-  final def zipWith[B, C](f: B => (A, C))(that: Serializer[R, C]): Serializer[R, B] =
+  final def zipWith[B, C](that: Serializer[R, C])(f: B => (A, C)): Serializer[R, B] =
     new Serializer[R, B] {
       def apply(b: B): URIO[R, Bytes] = {
         val (a, c) = f(b)
