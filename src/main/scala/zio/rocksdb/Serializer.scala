@@ -13,31 +13,27 @@ trait Serializer[-R, -A] { self =>
       def apply(b: B): URIO[R, Bytes] = self(f(b))
     }
 
-  final def divideWith[B, C](that: Serializer[R, C])(f: B => (A, C)): Serializer[R, B] =
-    new Serializer[R, B] {
-      def apply(b: B): URIO[R, Bytes] = {
+  final def divideWith[R1 <: R, B, C](that: Serializer[R1, C])(f: B => (A, C)): Serializer[R1, B] =
+    new Serializer[R1, B] {
+      def apply(b: B): URIO[R1, Bytes] = {
         val (a, c) = f(b)
         self(a).zipWith(that(c))(_ ++ _)
       }
     }
 
-  final def divide[B](that: Serializer[R, B]): Serializer[R, (A, B)] = divideWith(that)(identity[(A, B)])
+  final def divide[R1 <: R, B](that: Serializer[R1, B]): Serializer[R1, (A, B)] = divideWith(that)(identity[(A, B)])
 
-  final def chooseWith[B, C](that: Serializer[R, C])(f: B => Either[A, C]): Serializer[R, B] =
-    new Serializer[R, B] {
-      def apply(b: B): URIO[R, Bytes] =
+  final def chooseWith[R1 <: R, B, C](that: Serializer[R1, C])(f: B => Either[A, C]): Serializer[R1, B] =
+    new Serializer[R1, B] {
+      def apply(b: B): URIO[R1, Bytes] =
         f(b).fold(self.apply, that.apply)
     }
 
-  final def choose[B](that: Serializer[R, B]): Serializer[R, Either[A, B]] = chooseWith(that)(identity[Either[A, B]])
+  final def choose[R1 <: R, B](that: Serializer[R1, B]): Serializer[R1, Either[A, B]] =
+    chooseWith(that)(identity[Either[A, B]])
 }
 
 object Serializer extends CollectionSerializers with TupleSerializers {
-  def apply[A](f: A => Bytes): Serializer[Any, A] =
-    new Serializer[Any, A] {
-      def apply(a: A): UIO[Bytes] = URIO.succeed(f(a))
-    }
-
   def apply[R, A](f: A => URIO[R, Bytes]): Serializer[R, A] =
     new Serializer[R, A] {
       def apply(a: A): URIO[R, Bytes] = f(a)
@@ -61,7 +57,7 @@ object Serializer extends CollectionSerializers with TupleSerializers {
 
 private[rocksdb] trait CollectionSerializers extends PrimitiveSerializers {
   val bytes: Serializer[Any, Bytes] =
-    Serializer[Bytes](identity)
+    Serializer[Any, Bytes](UIO.succeed(_))
 
   val byteArray: Serializer[Any, Array[Byte]] =
     bytes.contramap(Chunk.fromArray)
@@ -431,7 +427,7 @@ private[rocksdb] trait TupleSerializers {
     sert: Serializer[RR, T],
     seru: Serializer[RR, U]
   ): Serializer[RR, (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U)] =
-    (sera divide serb divide serc divide serd divide sere divide serf divide serg divide serh divide seri divide serj divide serk divide serl divide serm divide sern divide sero divide serp divide serq divide serr divide sers divide sert divide u).contramap {
+    (sera divide serb divide serc divide serd divide sere divide serf divide serg divide serh divide seri divide serj divide serk divide serl divide serm divide sern divide sero divide serp divide serq divide serr divide sers divide sert divide seru).contramap {
       case (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u) =>
         ((((((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r), s), t), u)
     }
@@ -443,7 +439,7 @@ private[rocksdb] trait PrimitiveSerializers extends SerializerUtilityFunctions {
     byte.contramap(if (_) 1 else 0)
 
   val byte: Serializer[Any, Byte] =
-    Serializer[Byte](Chunk.single)
+    Serializer[Any, Byte](b => UIO(Chunk.single(b)))
 
   val char: Serializer[Any, Char] =
     fromByteBuffer(jlang.Character.BYTES, _ putChar _)

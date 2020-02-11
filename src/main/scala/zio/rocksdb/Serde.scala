@@ -1,6 +1,6 @@
 package zio.rocksdb
 
-import zio.ZIO
+import zio.{ URIO, ZIO }
 
 trait Serde[-R, A] extends Serializer[R, A] with Deserializer[R, A]
 
