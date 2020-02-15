@@ -115,25 +115,22 @@ object RocksDB {
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
     ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] = {
       val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
+      val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
-      Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
-        .toManaged(db => Task(db.closeE()).orDie)
-        .map(db => withDB(db) -> handles.asScala.toList)
+      make(db).map(_ -> handles.asScala.toList)
     }
 
     def open(path: String): Managed[Throwable, RocksDB] =
-      Task(jrocks.RocksDB.open(path))
-        .toManaged(db => Task(db.closeE()).orDie)
-        .map(withDB)
+      make(Task(jrocks.RocksDB.open(path)))
 
     def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB] =
-      Task(jrocks.RocksDB.open(options, path))
-        .toManaged(db => Task(db.closeE()).orDie)
-        .map(withDB)
+      make(Task(jrocks.RocksDB.open(options, path)))
 
-    private def withDB(db: jrocks.RocksDB): RocksDB =
-      new RocksDB {
-        val rocksDB: Service[Any] = new RocksDB.Live(db)
+    private def make(db: Task[jrocks.RocksDB]): Managed[Throwable, RocksDB] =
+      db.toManaged(db => Task(db.closeE()).orDie).map { db =>
+        new RocksDB {
+          val rocksDB: Service[Any] = new RocksDB.Live(db)
+        }
       }
   }
 }
