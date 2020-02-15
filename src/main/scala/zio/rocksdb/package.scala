@@ -4,9 +4,6 @@ import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
 
 package object rocksdb extends RocksDB.Service[RocksDB] {
-  def close: URIO[RocksDB, Unit] =
-    URIO.accessM(_.rocksDB.close)
-
   def delete(key: Array[Byte]): RIO[RocksDB, Unit] =
     RIO.accessM(_.rocksDB.delete(key))
 
