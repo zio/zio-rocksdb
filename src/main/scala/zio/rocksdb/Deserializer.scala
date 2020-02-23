@@ -74,6 +74,18 @@ private[rocksdb] trait CollectionDeserializers extends PrimitiveDeserializers {
 
   val shorts: Deserializer[Any, Chunk[Short]] =
     bytes.mapMResult(fromByteBuffer(short))
+
+  def list[R, A](as: Deserializer[R, Chunk[A]]): Deserializer[R, List[A]] =
+    as.map(_.toList)
+
+  def map[R, K, A](as: Deserializer[R, Chunk[(K, A)]]): Deserializer[R, Map[K, A]] =
+    as.map(as => Map(as.toList: _*))
+
+  def set[R, A](as: Deserializer[R, Chunk[A]]): Deserializer[R, Set[A]] =
+    as.map(as => Set(as.toList: _*))
+
+  def vector[R, A](as: Deserializer[R, Chunk[A]]): Deserializer[R, Vector[A]] =
+    as.map(as => Vector(as.toList: _*))
 }
 
 private[rocksdb] trait PrimitiveDeserializers extends DeserializerUtilityFunctions {
