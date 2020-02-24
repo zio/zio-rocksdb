@@ -85,17 +85,14 @@ private[rocksdb] trait TupleSerializers {
   def tuple2[R, A, B](implicit sera: Serializer[R, A], serb: Serializer[R, B]): Serializer[R, (A, B)] =
     sera divide serb
 
-  def tuple3[R, A, B](implicit sera: Serializer[R, A], serb: Serializer[R, B]): Serializer[R, (A, B)] =
-    sera divide serb
-
-  def tuple4[RR, A, B, C](
+  def tuple3[RR, A, B, C](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C]
   ): Serializer[RR, (A, B, C)] =
     (sera divide serb divide serc).contramap { case (a, b, c) => ((a, b), c) }
 
-  def tuple5[RR, A, B, C, D](
+  def tuple4[RR, A, B, C, D](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -103,7 +100,7 @@ private[rocksdb] trait TupleSerializers {
   ): Serializer[RR, (A, B, C, D)] =
     (sera divide serb divide serc divide serd).contramap { case (a, b, c, d) => (((a, b), c), d) }
 
-  def tuple6[RR, A, B, C, D, E](
+  def tuple5[RR, A, B, C, D, E](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -112,7 +109,7 @@ private[rocksdb] trait TupleSerializers {
   ): Serializer[RR, (A, B, C, D, E)] =
     (sera divide serb divide serc divide serd divide sere).contramap { case (a, b, c, d, e) => ((((a, b), c), d), e) }
 
-  def tuple7[RR, A, B, C, D, E, F](
+  def tuple6[RR, A, B, C, D, E, F](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -124,7 +121,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f) => (((((a, b), c), d), e), f)
     }
 
-  def tuple8[RR, A, B, C, D, E, F, G](
+  def tuple7[RR, A, B, C, D, E, F, G](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -137,7 +134,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g) => ((((((a, b), c), d), e), f), g)
     }
 
-  def tuple9[RR, A, B, C, D, E, F, G, H](
+  def tuple8[RR, A, B, C, D, E, F, G, H](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -151,7 +148,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h) => (((((((a, b), c), d), e), f), g), h)
     }
 
-  def tuple10[RR, A, B, C, D, E, F, G, H, I](
+  def tuple9[RR, A, B, C, D, E, F, G, H, I](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -166,7 +163,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h, i) => ((((((((a, b), c), d), e), f), g), h), i)
     }
 
-  def tuple11[RR, A, B, C, D, E, F, G, H, I, J](
+  def tuple10[RR, A, B, C, D, E, F, G, H, I, J](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -182,7 +179,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h, i, j) => (((((((((a, b), c), d), e), f), g), h), i), j)
     }
 
-  def tuple12[RR, A, B, C, D, E, F, G, H, I, J, K](
+  def tuple11[RR, A, B, C, D, E, F, G, H, I, J, K](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -199,7 +196,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h, i, j, k) => ((((((((((a, b), c), d), e), f), g), h), i), j), k)
     }
 
-  def tuple13[RR, A, B, C, D, E, F, G, H, I, J, K, L](
+  def tuple12[RR, A, B, C, D, E, F, G, H, I, J, K, L](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -217,7 +214,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h, i, j, k, l) => (((((((((((a, b), c), d), e), f), g), h), i), j), k), l)
     }
 
-  def tuple14[RR, A, B, C, D, E, F, G, H, I, J, K, L, M](
+  def tuple13[RR, A, B, C, D, E, F, G, H, I, J, K, L, M](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -236,7 +233,7 @@ private[rocksdb] trait TupleSerializers {
       case (a, b, c, d, e, f, g, h, i, j, k, l, m) => ((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m)
     }
 
-  def tuple15[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N](
+  def tuple14[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -257,7 +254,7 @@ private[rocksdb] trait TupleSerializers {
         (((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n)
     }
 
-  def tuple16[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O](
+  def tuple15[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -279,7 +276,7 @@ private[rocksdb] trait TupleSerializers {
         ((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o)
     }
 
-  def tuple17[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P](
+  def tuple16[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -302,7 +299,7 @@ private[rocksdb] trait TupleSerializers {
         (((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p)
     }
 
-  def tuple18[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q](
+  def tuple17[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -326,7 +323,7 @@ private[rocksdb] trait TupleSerializers {
         ((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q)
     }
 
-  def tuple19[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R](
+  def tuple18[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -351,7 +348,7 @@ private[rocksdb] trait TupleSerializers {
         (((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r)
     }
 
-  def tuple20[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S](
+  def tuple19[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -377,7 +374,7 @@ private[rocksdb] trait TupleSerializers {
         ((((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r), s)
     }
 
-  def tuple21[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T](
+  def tuple20[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -404,7 +401,7 @@ private[rocksdb] trait TupleSerializers {
         (((((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r), s), t)
     }
 
-  def tuple22[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U](
+  def tuple21[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U](
     implicit sera: Serializer[RR, A],
     serb: Serializer[RR, B],
     serc: Serializer[RR, C],
@@ -430,6 +427,35 @@ private[rocksdb] trait TupleSerializers {
     (sera divide serb divide serc divide serd divide sere divide serf divide serg divide serh divide seri divide serj divide serk divide serl divide serm divide sern divide sero divide serp divide serq divide serr divide sers divide sert divide seru).contramap {
       case (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u) =>
         ((((((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r), s), t), u)
+    }
+
+  def tuple22[RR, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V](
+    implicit sera: Serializer[RR, A],
+    serb: Serializer[RR, B],
+    serc: Serializer[RR, C],
+    serd: Serializer[RR, D],
+    sere: Serializer[RR, E],
+    serf: Serializer[RR, F],
+    serg: Serializer[RR, G],
+    serh: Serializer[RR, H],
+    seri: Serializer[RR, I],
+    serj: Serializer[RR, J],
+    serk: Serializer[RR, K],
+    serl: Serializer[RR, L],
+    serm: Serializer[RR, M],
+    sern: Serializer[RR, N],
+    sero: Serializer[RR, O],
+    serp: Serializer[RR, P],
+    serq: Serializer[RR, Q],
+    serr: Serializer[RR, R],
+    sers: Serializer[RR, S],
+    sert: Serializer[RR, T],
+    seru: Serializer[RR, U],
+    serv: Serializer[RR, V]
+  ): Serializer[RR, (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V)] =
+    (sera divide serb divide serc divide serd divide sere divide serf divide serg divide serh divide seri divide serj divide serk divide serl divide serm divide sern divide sero divide serp divide serq divide serr divide sers divide sert divide seru divide serv).contramap {
+      case (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v) =>
+        (((((((((((((((((((((a, b), c), d), e), f), g), h), i), j), k), l), m), n), o), p), q), r), s), t), u), v)
     }
 
 }
@@ -463,12 +489,9 @@ private[rocksdb] trait PrimitiveSerializers extends SerializerUtilityFunctions {
 private[rocksdb] trait SerializerUtilityFunctions {
   private[rocksdb] def fromByteBuffer[A](n: Int, mutate: (ByteBuffer, A) => Any): Serializer[Any, A] =
     new Serializer[Any, A] {
-      var buf: ByteBuffer = null
       def apply(a: A): UIO[Bytes] =
         URIO {
-          if (buf eq null)
-            buf = ByteBuffer.allocate(n)
-          buf.position(0)
+          val buf: ByteBuffer = ByteBuffer.allocate(n)
           mutate(buf, a)
           Chunk.fromArray(buf.array)
         }
@@ -485,6 +508,7 @@ private[rocksdb] trait SerializerUtilityFunctions {
           val buf = ByteBuffer.allocate(l)
           var i   = 0
           fa.foreach { a =>
+            buf.clear()
             buf.position(n * i)
             mutate(buf, a)
             i += 1
