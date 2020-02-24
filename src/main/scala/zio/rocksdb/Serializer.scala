@@ -62,22 +62,22 @@ private[rocksdb] trait CollectionSerializers extends PrimitiveSerializers {
   val byteArray: Serializer[Any, Array[Byte]] =
     bytes.contramap(Chunk.fromArray)
 
-  def char[F[_]](implicit ev: F[Char] <:< Iterable[Char]): Serializer[Any, F[Char]] =
+  def chars[F[_]](implicit ev: F[Char] <:< Iterable[Char]): Serializer[Any, F[Char]] =
     fromByteBuffer[F, Char](jlang.Character.BYTES, _ putChar _)
 
-  def double[F[_]](implicit ev: F[Double] <:< Iterable[Double]): Serializer[Any, F[Double]] =
+  def doubles[F[_]](implicit ev: F[Double] <:< Iterable[Double]): Serializer[Any, F[Double]] =
     fromByteBuffer[F, Double](jlang.Double.BYTES, _ putDouble _)
 
-  def float[F[_]](implicit ev: F[Float] <:< Iterable[Float]): Serializer[Any, F[Float]] =
+  def floats[F[_]](implicit ev: F[Float] <:< Iterable[Float]): Serializer[Any, F[Float]] =
     fromByteBuffer[F, Float](jlang.Float.BYTES, _ putFloat _)
 
-  def int[F[_]](implicit ev: F[Int] <:< Iterable[Int]): Serializer[Any, F[Int]] =
+  def ints[F[_]](implicit ev: F[Int] <:< Iterable[Int]): Serializer[Any, F[Int]] =
     fromByteBuffer[F, Int](jlang.Integer.BYTES, _ putInt _)
 
-  def long[F[_]](implicit ev: F[Long] <:< Iterable[Long]): Serializer[Any, F[Long]] =
+  def longs[F[_]](implicit ev: F[Long] <:< Iterable[Long]): Serializer[Any, F[Long]] =
     fromByteBuffer[F, Long](jlang.Long.BYTES, _ putLong _)
 
-  def short[F[_]](implicit ev: F[Short] <:< Iterable[Short]): Serializer[Any, F[Short]] =
+  def shorts[F[_]](implicit ev: F[Short] <:< Iterable[Short]): Serializer[Any, F[Short]] =
     fromByteBuffer[F, Short](jlang.Short.BYTES, _ putShort _)
 }
 
