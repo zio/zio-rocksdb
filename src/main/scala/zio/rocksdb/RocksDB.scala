@@ -13,8 +13,6 @@ trait RocksDB {
 
 object RocksDB {
   trait Service[R] {
-    def close: URIO[R, Unit]
-
     def delete(key: Array[Byte]): RIO[R, Unit]
 
     def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[R, Unit]
@@ -41,9 +39,6 @@ object RocksDB {
   }
 
   final class Live private (db: jrocks.RocksDB) extends Service[Any] {
-    def close: UIO[Unit] =
-      UIO(db.closeE())
-
     def delete(key: Array[Byte]): Task[Unit] =
       Task(db.delete(key))
 
@@ -118,23 +113,24 @@ object RocksDB {
       options: jrocks.DBOptions,
       path: String,
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-    ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] =
-      Task {
-        val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
-        val db      = jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles)
+    ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] = {
+      val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
+      val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
-        (withDB(db), handles.asScala.toList)
-      }.toManaged(_._1.rocksDB.close)
+      make(db).map(_ -> handles.asScala.toList)
+    }
 
     def open(path: String): Managed[Throwable, RocksDB] =
-      Task(withDB(jrocks.RocksDB.open(path))).toManaged(_.rocksDB.close)
+      make(Task(jrocks.RocksDB.open(path)))
 
     def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB] =
-      Task(withDB(jrocks.RocksDB.open(options, path))).toManaged(_.rocksDB.close)
+      make(Task(jrocks.RocksDB.open(options, path)))
 
-    private def withDB(db: jrocks.RocksDB): RocksDB =
-      new RocksDB {
-        val rocksDB: Service[Any] = new RocksDB.Live(db)
+    private def make(db: Task[jrocks.RocksDB]): Managed[Throwable, RocksDB] =
+      db.toManaged(db => Task(db.closeE()).orDie).map { db =>
+        new RocksDB {
+          val rocksDB: Service[Any] = new RocksDB.Live(db)
+        }
       }
   }
 }
