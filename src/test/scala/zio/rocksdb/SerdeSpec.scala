@@ -48,7 +48,18 @@ object SerdeSpec
           )
         ),
         suite("collections")(
-          roundtrip("lists", Gen.listOf(Gen.anyInt), Serializer.ints[List], Deserializer.list(Deserializer.ints))
+          roundtrip(
+            "lists",
+            Gen.listOf(Gen.anyInt),
+            Serializer.ints[List],
+            Deserializer.list(Deserializer.chunk(Deserializer.int))
+          ),
+          roundtrip(
+            "maps",
+            Gen.listOf(Gen.anyInt zip Gen.anyShort).map(_.toMap),
+            Serializer.map(Serializer.int, Serializer.short),
+            Deserializer.map(Deserializer.chunk(Deserializer.int zip Deserializer.short))
+          )
         )
       )
     )

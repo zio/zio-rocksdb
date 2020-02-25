@@ -1,6 +1,6 @@
 package zio.rocksdb
 
-import zio.{ Chunk, UIO, URIO }
+import zio.{ Chunk, UIO, URIO, ZIO }
 import java.{ lang => jlang }
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -79,6 +79,18 @@ private[rocksdb] trait CollectionSerializers extends PrimitiveSerializers {
 
   def shorts[F[_]](implicit ev: F[Short] <:< Iterable[Short]): Serializer[Any, F[Short]] =
     fromByteBuffer[F, Short](jlang.Short.BYTES, _ putShort _)
+
+  def chunk[R, A](enc: Serializer[R, A]): Serializer[R, Chunk[A]] =
+    list(enc).contramap(_.toList)
+
+  def list[R, A](enc: Serializer[R, A]): Serializer[R, List[A]] =
+    Serializer[R, List[A]](ZIO.foldLeft(_)(Chunk.empty: Bytes) { case (as, a) => enc(a).map(as ++ _) })
+
+  def map[R, K, V](encK: Serializer[R, K], encV: Serializer[R, V]): Serializer[R, Map[K, V]] =
+    list(encK divide encV).contramap[Map[K, V]](_.toList)
+
+  def vector[R, A](enc: Serializer[R, A]): Serializer[R, Vector[A]] =
+    list(enc).contramap(_.toList)
 }
 
 private[rocksdb] trait TupleSerializers {
