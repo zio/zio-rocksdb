@@ -4,6 +4,8 @@ import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
 
 package object rocksdb extends RocksDB.Service[RocksDB] {
+  type Bytes = Chunk[Byte]
+
   def delete(key: Array[Byte]): RIO[RocksDB, Unit] =
     RIO.accessM(_.rocksDB.delete(key))
 
