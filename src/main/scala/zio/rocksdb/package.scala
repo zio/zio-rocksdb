@@ -3,43 +3,45 @@ package zio
 import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
 
-package object rocksdb extends RocksDB.Service[RocksDB] {
+package object rocksdb {
   type Bytes = Chunk[Byte]
 
+  type RocksDB = Has[RocksDB.Service]
+
   def delete(key: Array[Byte]): RIO[RocksDB, Unit] =
-    RIO.accessM(_.rocksDB.delete(key))
+    RIO.accessM(_.get.delete(key))
 
   def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[RocksDB, Unit] =
-    RIO.accessM(_.rocksDB.delete(cfHandle, key))
+    RIO.accessM(_.get.delete(cfHandle, key))
 
   def get(key: Array[Byte]): RIO[RocksDB, Option[Array[Byte]]] =
-    RIO.accessM(_.rocksDB.get(key))
+    RIO.accessM(_.get.get(key))
 
   def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[RocksDB, Option[Array[Byte]]] =
-    RIO.accessM(_.rocksDB.get(cfHandle, key))
+    RIO.accessM(_.get.get(cfHandle, key))
 
   def multiGetAsList(keys: List[Array[Byte]]): RIO[RocksDB, List[Option[Array[Byte]]]] =
-    RIO.accessM(_.rocksDB.multiGetAsList(keys))
+    RIO.accessM(_.get.multiGetAsList(keys))
 
   def multiGetAsList(
     keysAndHandles: Map[Array[Byte], jrocks.ColumnFamilyHandle]
   ): RIO[RocksDB, List[Option[Array[Byte]]]] =
-    RIO.accessM(_.rocksDB.multiGetAsList(keysAndHandles))
+    RIO.accessM(_.get.multiGetAsList(keysAndHandles))
 
   def newIterator: ZStream[RocksDB, Throwable, (Array[Byte], Array[Byte])] =
-    ZStream.unwrap(ZIO.access[RocksDB](_.rocksDB.newIterator))
+    ZStream.unwrap(ZIO.access[RocksDB](_.get.newIterator))
 
   def newIterator(cfHandle: jrocks.ColumnFamilyHandle): ZStream[RocksDB, Throwable, (Array[Byte], Array[Byte])] =
-    ZStream.unwrap(ZIO.access[RocksDB](_.rocksDB.newIterator(cfHandle)))
+    ZStream.unwrap(ZIO.access[RocksDB](_.get.newIterator(cfHandle)))
 
   def newIterators(
     cfHandles: List[jrocks.ColumnFamilyHandle]
   ): ZStream[RocksDB, Throwable, (jrocks.ColumnFamilyHandle, ZStream[RocksDB, Throwable, (Array[Byte], Array[Byte])])] =
-    ZStream.unwrap(ZIO.access[RocksDB](_.rocksDB.newIterators(cfHandles)))
+    ZStream.unwrap(ZIO.access[RocksDB](_.get.newIterators(cfHandles)))
 
   def put(key: Array[Byte], value: Array[Byte]): RIO[RocksDB, Unit] =
-    RIO.accessM(_.rocksDB.put(key, value))
+    RIO.accessM(_.get.put(key, value))
 
   def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): RIO[RocksDB, Unit] =
-    RIO.accessM(_.rocksDB.put(cfHandle, key, value))
+    RIO.accessM(_.get.put(cfHandle, key, value))
 }

@@ -7,38 +7,47 @@ import zio.stream._
 
 import scala.jdk.CollectionConverters._
 
-trait RocksDB {
-  val rocksDB: RocksDB.Service[Any]
-}
-
 object RocksDB {
-  trait Service[R] {
-    def delete(key: Array[Byte]): RIO[R, Unit]
+  trait Service {
+    def delete(key: Array[Byte]): Task[Unit]
 
-    def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[R, Unit]
+    def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
 
-    def get(key: Array[Byte]): RIO[R, Option[Array[Byte]]]
+    def get(key: Array[Byte]): Task[Option[Array[Byte]]]
 
-    def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[R, Option[Array[Byte]]]
+    def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]]
 
-    def multiGetAsList(keys: List[Array[Byte]]): RIO[R, List[Option[Array[Byte]]]]
+    def multiGetAsList(keys: List[Array[Byte]]): Task[List[Option[Array[Byte]]]]
 
-    def multiGetAsList(keysAndHandles: Map[Array[Byte], jrocks.ColumnFamilyHandle]): RIO[R, List[Option[Array[Byte]]]]
+    def multiGetAsList(keysAndHandles: Map[Array[Byte], jrocks.ColumnFamilyHandle]): Task[List[Option[Array[Byte]]]]
 
-    def newIterator: ZStream[R, Throwable, (Array[Byte], Array[Byte])]
+    def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])]
 
-    def newIterator(cfHandle: jrocks.ColumnFamilyHandle): ZStream[R, Throwable, (Array[Byte], Array[Byte])]
+    def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])]
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
-    ): ZStream[R, Throwable, (jrocks.ColumnFamilyHandle, ZStream[R, Throwable, (Array[Byte], Array[Byte])])]
+    ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])]
 
-    def put(key: Array[Byte], value: Array[Byte]): RIO[R, Unit]
+    def put(key: Array[Byte], value: Array[Byte]): Task[Unit]
 
-    def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): RIO[R, Unit]
+    def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
   }
 
-  final class Live private (db: jrocks.RocksDB) extends Service[Any] {
+  def live(
+    options: jrocks.DBOptions,
+    path: String,
+    cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
+  ): ZLayer.NoDeps[Throwable, Has[(RocksDB.Service, List[jrocks.ColumnFamilyHandle])]] =
+    ZLayer.fromManaged(Live.open(options, path, cfDescriptors))
+
+  def live(path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+    ZLayer.fromManaged(Live.open(path))
+
+  def live(options: jrocks.Options, path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+    ZLayer.fromManaged(Live.open(options, path))
+
+  final class Live private (db: jrocks.RocksDB) extends Service {
     def delete(key: Array[Byte]): Task[Unit] =
       Task(db.delete(key))
 
@@ -113,24 +122,20 @@ object RocksDB {
       options: jrocks.DBOptions,
       path: String,
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-    ): Managed[Throwable, (RocksDB, List[jrocks.ColumnFamilyHandle])] = {
+    ): Managed[Throwable, (RocksDB.Service, List[jrocks.ColumnFamilyHandle])] = {
       val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
       val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
       make(db).map(_ -> handles.asScala.toList)
     }
 
-    def open(path: String): Managed[Throwable, RocksDB] =
+    def open(path: String): Managed[Throwable, RocksDB.Service] =
       make(Task(jrocks.RocksDB.open(path)))
 
-    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB] =
+    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB.Service] =
       make(Task(jrocks.RocksDB.open(options, path)))
 
-    private def make(db: Task[jrocks.RocksDB]): Managed[Throwable, RocksDB] =
-      db.toManaged(db => Task(db.closeE()).orDie).map { db =>
-        new RocksDB {
-          val rocksDB: Service[Any] = new RocksDB.Live(db)
-        }
-      }
+    private def make(db: Task[jrocks.RocksDB]): Managed[Throwable, RocksDB.Service] =
+      db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_))
   }
 }
