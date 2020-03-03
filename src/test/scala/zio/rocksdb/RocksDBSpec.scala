@@ -69,7 +69,7 @@ object RocksDBSpec extends DefaultRunnableSpec {
         }
       }.flatMap { dir =>
         val opts = new Options().setCreateIfMissing(true)
-        RocksDB.Live.open(opts, dir.toAbsolutePath.toString)
+        Live.open(opts, dir.toAbsolutePath.toString)
       }
     }
 }
