@@ -67,7 +67,7 @@ object RocksDB {
         ZStream.fromEffect(Task(it.isValid())).flatMap { valid =>
           if (!valid) ZStream.empty
           else
-            ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.fromPull {
+            ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.repeatEffectOption {
               Task {
                 it.next()
 
