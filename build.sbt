@@ -40,10 +40,10 @@ buildInfoPackage := "zio.rocksdb"
 buildInfoObject := "BuildInfo"
 
 libraryDependencies ++= Seq(
-  "dev.zio"                %% "zio-streams"             % "1.0.0-RC17",
+  "dev.zio"                %% "zio-streams"             % "1.0.0-RC18",
   "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.3",
-  "dev.zio"                %% "zio-test"                % "1.0.0-RC17" % "test",
-  "dev.zio"                %% "zio-test-sbt"            % "1.0.0-RC17" % "test",
+  "dev.zio"                %% "zio-test"                % "1.0.0-RC18" % "test",
+  "dev.zio"                %% "zio-test-sbt"            % "1.0.0-RC18" % "test",
   "org.rocksdb"            % "rocksdbjni"               % "6.4.6"
 )
 
