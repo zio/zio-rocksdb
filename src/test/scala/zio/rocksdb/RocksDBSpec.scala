@@ -39,7 +39,7 @@ object RocksDBSpec extends DefaultRunnableSpec {
         val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
         for {
-          _          <- RIO.foreach(data) { case (k, v) => rocksdb.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+          _          <- RIO.foreach_(data) { case (k, v) => rocksdb.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
           results    <- rocksdb.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))
