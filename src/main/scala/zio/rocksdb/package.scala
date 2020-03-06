@@ -58,18 +58,18 @@ package object rocksdb {
       ): Task[List[Option[Array[Byte]]]]
 
       /**
-       * Scans the default ColumnFamily in the database and emits the results as a [[ZStream]].
+       * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
        */
       def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])]
 
       /**
-       * Scans a specific ColumnFamily in the database and emits the results as a [[ZStream]].
+       * Scans a specific ColumnFamily in the database and emits the results as a `ZStream`.
        */
       def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])]
 
       /**
        * Scans multiple ColumnFamilies in the database and emits the results in multiple streams,
-       * whereas the streams themselves are also emitted in a [[ZStream]].
+       * whereas the streams themselves are also emitted in a `ZStream`.
        */
       def newIterators(
         cfHandles: List[jrocks.ColumnFamilyHandle]
@@ -86,6 +86,9 @@ package object rocksdb {
       def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
     }
 
+    /**
+     * Opens the database at the specified path with the specified ColumnFamilies.
+     */
     def live(
       options: jrocks.DBOptions,
       path: String,
@@ -93,9 +96,15 @@ package object rocksdb {
     ): ZLayer.NoDeps[Throwable, RocksDB] =
       ZLayer.fromManaged(Live.open(options, path, cfDescriptors))
 
+    /**
+     * Opens the default ColumnFamily for the database at the specified path.
+     */
     def live(path: String): ZLayer.NoDeps[Throwable, RocksDB] =
       ZLayer.fromManaged(Live.open(path))
 
+    /**
+     * Opens the default ColumnFamily for the database at the specified path.
+     */
     def live(options: jrocks.Options, path: String): ZLayer.NoDeps[Throwable, RocksDB] =
       ZLayer.fromManaged(Live.open(options, path))
   }
