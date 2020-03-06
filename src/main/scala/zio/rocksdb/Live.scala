@@ -8,7 +8,7 @@ import zio.stream._
 
 import scala.jdk.CollectionConverters._
 
-final class Live private (db: jrocks.RocksDB) extends RocksDB.Service {
+final class Live private (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB.Service {
   def delete(key: Array[Byte]): Task[Unit] =
     Task(db.delete(key))
 
@@ -21,14 +21,17 @@ final class Live private (db: jrocks.RocksDB) extends RocksDB.Service {
   def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]] =
     Task(Option(db.get(cfHandle, key)))
 
+  def initialHandles: Task[List[jrocks.ColumnFamilyHandle]] =
+    Task.succeed(cfHandles)
+
   def multiGetAsList(keys: List[Array[Byte]]): Task[List[Option[Array[Byte]]]] =
     Task(db.multiGetAsList(keys.asJava).asScala.toList.map(Option(_)))
 
   def multiGetAsList(
-    keysAndHandles: Map[Array[Byte], jrocks.ColumnFamilyHandle]
+    handles: List[jrocks.ColumnFamilyHandle],
+    keys: List[Array[Byte]]
   ): Task[List[Option[Array[Byte]]]] =
     Task {
-      val (keys, handles) = keysAndHandles.toList.unzip
       db.multiGetAsList(handles.asJava, keys.asJava).asScala.toList.map(Option(_))
     }
 
@@ -83,19 +86,22 @@ object Live {
     options: jrocks.DBOptions,
     path: String,
     cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-  ): Managed[Throwable, (RocksDB.Service, List[jrocks.ColumnFamilyHandle])] = {
+  ): Managed[Throwable, RocksDB.Service] = {
     val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
     val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
-    make(db).map(_ -> handles.asScala.toList)
+    make(db, handles.asScala.toList)
   }
 
   def open(path: String): Managed[Throwable, RocksDB.Service] =
-    make(Task(jrocks.RocksDB.open(path)))
+    make(Task(jrocks.RocksDB.open(path)), Nil)
 
   def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB.Service] =
-    make(Task(jrocks.RocksDB.open(options, path)))
+    make(Task(jrocks.RocksDB.open(options, path)), Nil)
 
-  private def make(db: Task[jrocks.RocksDB]): Managed[Throwable, RocksDB.Service] =
-    db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_))
+  private def make(
+    db: Task[jrocks.RocksDB],
+    cfHandles: List[jrocks.ColumnFamilyHandle]
+  ): Managed[Throwable, RocksDB.Service] =
+    db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
 }
