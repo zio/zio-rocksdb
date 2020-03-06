@@ -9,28 +9,24 @@ A ZIO-based interface to RocksDB.
 Add the following dependencies to your `build.sbt` file:
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-streams" % "1.0.0-RC17",
   "dev.zio" %% "zio-rocksdb" % "<version>"
 )
 ```
 
 Use the provided `RocksDB` wrapper:
 ```scala
-import zio.rocksdb
-import zio.rocksdb.RocksDB
 import java.nio.charset.StandardCharsets
+
+import zio.ZLayer
+import zio.rocksdb
+import zio.rocksdb.{ Live, RocksDB }
 
 val key   = "key".getBytes(StandardCharsets.UTF_8)
 val value = "value".getBytes(StandardCharsets.UTF_8)
 
-val readWrite =
-  for {
-    _      <- rocksdb.put(key, value)
-    result <- rocksdb.get(key)
-  } yield result
-
-val result: Task[Option[Array[Byte]]] =
-  readWrite.provideManaged(RocksDB.Live.open("/data/state"))
+val database  = ZLayer.fromManaged(Live.open("/data/state"))
+val readWrite = rocksdb.put(key, value) *> rocksdb.get(key)
+val result    = readWrite.provideCustomLayer(database)
 ```
 
 ## Getting help
