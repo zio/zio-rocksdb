@@ -22,9 +22,8 @@ package object transaction {
     }
 
     def transaction[R <: Has[_], E >: Throwable, A](
-      zio: ZIO[R with Transaction, E, A]
-    ): ZIO[R with TransactionDB, E, A] =
-      zio.provideSomeLayer[R with TransactionDB](ZTransaction.live)
+      zio: ZIO[Transaction with R, E, A]
+    ): ZIO[TransactionDB with R, E, A] = zio.provideSomeLayer[TransactionDB with R](ZTransaction.live)
   }
 
   // Helper Utilities
