@@ -4,7 +4,13 @@
 
 A ZIO-based interface to RocksDB.
 
-## Quickstart
+## Table of Content
+   - [Quick Start](#quick-start)   
+   - [Using Transactions](#using-transactions)
+   - [Getting Help](#getting-help)
+   - [Legal](#legal)
+
+## Quick Start
 
 Add the following dependencies to your `build.sbt` file:
 ```scala
@@ -29,7 +35,27 @@ val readWrite = rocksdb.put(key, value) *> rocksdb.get(key)
 val result    = readWrite.provideCustomLayer(database)
 ```
 
-## Getting help
+## Using Transactions
+
+```scala
+import java.nio.charset.StandardCharsets
+
+import zio.ZLayer
+import zio.rocksdb.{transaction}
+
+val key   = "key".getBytes(StandardCharsets.UTF_8)
+val value = "value".getBytes(StandardCharsets.UTF_8)
+
+val database  = ZLayer.fromManaged(transaction.Live.open("/data/state"))
+val readWrite = transaction.atomically(
+  transaction.put(key, value) *> transaction.get(key)
+) 
+val result    = readWrite.provideCustomLayer(database)
+```
+
+
+
+## Getting Help
 
 Join us on the [ZIO Discord server](https://discord.gg/2ccFBr4).
 
