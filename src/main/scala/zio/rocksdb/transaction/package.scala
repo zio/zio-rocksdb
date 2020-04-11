@@ -50,10 +50,6 @@ package object transaction {
     trait TransactionDBService {
       def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[TransactionService]
     }
-
-    def transaction[R <: Has[_], E >: Throwable, A](
-      zio: ZIO[Transaction with R, E, A]
-    ): ZIO[TransactionDB with R, E, A] = zio.provideSomeLayer[TransactionDB with R](ZTransaction.live)
   }
 
   // Helper Utilities
@@ -68,4 +64,7 @@ package object transaction {
   def rollback: RIO[Transaction, Unit]                      = ZIO.accessM[Transaction](_.get.rollback)
   def put(key: Bytes, value: Bytes): RIO[Transaction, Unit] = ZIO.accessM[Transaction](_.get.put(key, value))
   def delete(key: Bytes): RIO[Transaction, Unit]            = ZIO.accessM[Transaction](_.get.delete(key))
+  def atomically[R <: Has[_], E >: Throwable, A](
+    zio: ZIO[Transaction with R, E, A]
+  ): ZIO[TransactionDB with R, E, A] = zio.provideSomeLayer[TransactionDB with R](ZTransaction.live)
 }

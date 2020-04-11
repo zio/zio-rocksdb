@@ -20,7 +20,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
         for {
-          result <- RocksDB.transaction(for {
+          result <- atomically(for {
                      _      <- put(key, value)
                      result <- get(key)
                    } yield result)
@@ -31,7 +31,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
         val value = "value".getBytes(UTF_8)
 
         for {
-          result <- RocksDB.transaction(for {
+          result <- atomically(for {
                      _      <- put(key, value)
                      result <- get(key)
                      _      <- console.putStrLn(result.toString)
@@ -44,13 +44,13 @@ object TransactionDBSpec extends DefaultRunnableSpec {
         val expected = isSome(equalTo(count))
 
         for {
-          _ <- RocksDB.transaction(put(key, 0.toString.getBytes(UTF_8)))
+          _ <- atomically(put(key, 0.toString.getBytes(UTF_8)))
           _ <- concurrent(count) {
-                RocksDB.transaction(getForUpdate(key, exclusive = true) >>= { iCount =>
+                atomically(getForUpdate(key, exclusive = true) >>= { iCount =>
                   put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(-1).toString.getBytes(UTF_8))
                 })
               }
-          actual <- RocksDB.transaction(get(key))
+          actual <- atomically(get(key))
         } yield assert(actual.map(bytesToInt))(expected)
       }
     ).provideCustomLayerShared(dbLayer) @@ timeout(1 second)
