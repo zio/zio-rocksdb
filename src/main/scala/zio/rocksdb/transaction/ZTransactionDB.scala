@@ -9,7 +9,7 @@ final class ZTransactionDB private (transactionDB: jrocks.TransactionDB) extends
   }
 
   override def beginTransaction(writeOptions: WriteOptions): UIO[RocksDB.TransactionService] =
-    ZTransaction.create(UIO(transactionDB.beginTransaction(writeOptions)))
+    ZTransaction(UIO(transactionDB.beginTransaction(writeOptions)))
 }
 
 object ZTransactionDB {

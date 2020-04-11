@@ -27,14 +27,14 @@ final class ZTransaction private (jTransaction: jrocks.Transaction) extends Rock
   }
 }
 object ZTransaction {
-  def create(jTransaction: UIO[jrocks.Transaction]): ZIO[Any, Nothing, ZTransaction] =
+  def apply(jTransaction: UIO[jrocks.Transaction]): ZIO[Any, Nothing, ZTransaction] =
     jTransaction.map(new ZTransaction(_))
 
   def live: ZLayer[TransactionDB, Throwable, Transaction] = live(new jrocks.WriteOptions())
   def live(writeOptions: jrocks.WriteOptions): ZLayer[TransactionDB, Throwable, Transaction] =
     ZLayer.fromManaged(make(writeOptions))
 
-  def make(writeOptions: WriteOptions): ZManaged[TransactionDB, Nothing, RocksDB.TransactionService] =
+  private def make(writeOptions: WriteOptions): ZManaged[TransactionDB, Nothing, RocksDB.TransactionService] =
     (for {
       managedTransaction <- ZIO.accessM[TransactionDB](_.get.beginTransaction(writeOptions))
     } yield managedTransaction).toManaged(k => k.commit.orDie)
