@@ -48,7 +48,6 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           _ <- concurrent(count) {
                 RocksDB.transaction(getForUpdate(key, exclusive = true) >>= { iCount =>
                   put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(-1).toString.getBytes(UTF_8))
-
                 })
               }
           actual <- RocksDB.transaction(get(key))

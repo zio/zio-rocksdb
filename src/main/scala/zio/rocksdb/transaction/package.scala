@@ -10,10 +10,30 @@ package object transaction {
 
   object RocksDB {
     trait TransactionService {
+
+      /**
+       * Retrieve a key from the default ColumnFamily in the database.
+       */
       def get(readOptions: jrocks.ReadOptions, key: Bytes): Task[Option[Bytes]]
+
+      /**
+       * Retrieve a key from the default ColumnFamily in the database and prepare to updates
+       */
       def getForUpdate(readOptions: jrocks.ReadOptions, key: Bytes, exclusive: Boolean): Task[Option[Bytes]]
+
+      /**
+       * Writes a key to the default ColumnFamily in the database.
+       */
       def put(key: Bytes, value: Bytes): Task[Unit]
+
+      /**
+       * Delete a key from the default ColumnFamily in the database.
+       */
       def delete(key: Bytes): Task[Unit]
+
+      /**
+       * Commits all the updates in transaction to the database.
+       */
       def commit: Task[Unit]
     }
 
