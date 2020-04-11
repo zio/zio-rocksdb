@@ -6,7 +6,7 @@ import zio._
 package object transaction {
   type Bytes         = Array[Byte]
   type Transaction   = Has[RocksDB.TransactionService]
-  type TransactionDB = Has[RocksDB.TransactionDBService]
+  type TransactionDB = Has[RocksDB.Service]
 
   object RocksDB {
     trait TransactionService {
@@ -47,7 +47,7 @@ package object transaction {
       def rollback: Task[Unit]
     }
 
-    trait TransactionDBService {
+    trait Service {
       def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[TransactionService]
     }
   }

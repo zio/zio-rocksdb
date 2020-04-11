@@ -3,7 +3,7 @@ import org.rocksdb.WriteOptions
 import org.{ rocksdb => jrocks }
 import zio.{ UIO, ZLayer, ZManaged }
 
-final class LiveTransactionDB private (transactionDB: jrocks.TransactionDB) extends RocksDB.TransactionDBService {
+final class LiveTransactionDB private (transactionDB: jrocks.TransactionDB) extends RocksDB.Service {
   private def close = UIO {
     transactionDB.close()
   }
@@ -16,13 +16,13 @@ object LiveTransactionDB {
   def open(
     options: jrocks.Options,
     path: String
-  ): ZManaged[Any, Throwable, RocksDB.TransactionDBService] = open(options, new jrocks.TransactionDBOptions(), path)
+  ): ZManaged[Any, Throwable, RocksDB.Service] = open(options, new jrocks.TransactionDBOptions(), path)
 
   def open(
     options: jrocks.Options,
     transactionDBOptions: jrocks.TransactionDBOptions,
     path: String
-  ): ZManaged[Any, Throwable, RocksDB.TransactionDBService] =
+  ): ZManaged[Any, Throwable, RocksDB.Service] =
     UIO(new LiveTransactionDB(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
       .toManaged(transactionDB => transactionDB.close)
 
