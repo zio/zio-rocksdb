@@ -53,8 +53,6 @@ val readWrite = transaction.atomically(
 val result    = readWrite.provideCustomLayer(database)
 ```
 
-
-
 ## Getting Help
 
 Join us on the [ZIO Discord server](https://discord.gg/2ccFBr4).
