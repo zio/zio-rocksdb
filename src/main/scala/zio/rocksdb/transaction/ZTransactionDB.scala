@@ -15,9 +15,14 @@ final class ZTransactionDB private (transactionDB: jrocks.TransactionDB) extends
 object ZTransactionDB {
   def open(
     options: jrocks.Options,
+    path: String
+  ): ZManaged[Any, Throwable, RocksDB.TransactionDBService] = open(options, new jrocks.TransactionDBOptions(), path)
+
+  def open(
+    options: jrocks.Options,
     transactionDBOptions: jrocks.TransactionDBOptions,
     path: String
-  ): ZManaged[Any, Throwable, ZTransactionDB] =
+  ): ZManaged[Any, Throwable, RocksDB.TransactionDBService] =
     UIO(new ZTransactionDB(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
       .toManaged(transactionDB => transactionDB.close)
 
