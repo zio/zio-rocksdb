@@ -37,5 +37,5 @@ object ZTransaction {
   private def make(writeOptions: WriteOptions): ZManaged[TransactionDB, Nothing, RocksDB.TransactionService] =
     (for {
       managedTransaction <- ZIO.accessM[TransactionDB](_.get.beginTransaction(writeOptions))
-    } yield managedTransaction).toManaged(k => k.commit.orDie)
+    } yield managedTransaction).toManaged(_.close)
 }

@@ -66,5 +66,5 @@ package object transaction {
   def delete(key: Bytes): RIO[Transaction, Unit]            = ZIO.accessM[Transaction](_.get.delete(key))
   def atomically[R <: Has[_], E >: Throwable, A](
     zio: ZIO[Transaction with R, E, A]
-  ): ZIO[TransactionDB with R, E, A] = zio.provideSomeLayer[TransactionDB with R](ZTransaction.live)
+  ): ZIO[TransactionDB with R, E, A] = (zio <* commit).provideSomeLayer[TransactionDB with R](ZTransaction.live)
 }
