@@ -60,7 +60,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
   private def dbLayer: ZLayer[Any, TestFailure[Nothing], TransactionDB] =
     ZLayer
       .fromManaged(ManagedPath() >>= { dir =>
-        ZTransactionDB.open(new jrocks.Options().setCreateIfMissing(true), dir.toAbsolutePath.toString)
+        LiveTransactionDB.open(new jrocks.Options().setCreateIfMissing(true), dir.toAbsolutePath.toString)
       })
       .mapError(TestFailure.die)
 

@@ -3,7 +3,7 @@ import org.rocksdb.WriteOptions
 import org.{ rocksdb => jrocks }
 import zio._
 
-final class ZTransaction private (jTransaction: jrocks.Transaction) extends RocksDB.TransactionService {
+final class LiveTransaction private (jTransaction: jrocks.Transaction) extends RocksDB.TransactionService {
   override def get(readOptions: jrocks.ReadOptions, key: Bytes): Task[Option[Bytes]] = Task {
     Option(jTransaction.get(readOptions, key))
   }
@@ -26,9 +26,9 @@ final class ZTransaction private (jTransaction: jrocks.Transaction) extends Rock
     jTransaction.rollback()
   }
 }
-object ZTransaction {
-  def apply(jTransaction: UIO[jrocks.Transaction]): ZIO[Any, Nothing, ZTransaction] =
-    jTransaction.map(new ZTransaction(_))
+object LiveTransaction {
+  def apply(jTransaction: UIO[jrocks.Transaction]): ZIO[Any, Nothing, LiveTransaction] =
+    jTransaction.map(new LiveTransaction(_))
 
   def live: ZLayer[TransactionDB, Throwable, Transaction] = live(new jrocks.WriteOptions())
   def live(writeOptions: jrocks.WriteOptions): ZLayer[TransactionDB, Throwable, Transaction] =
