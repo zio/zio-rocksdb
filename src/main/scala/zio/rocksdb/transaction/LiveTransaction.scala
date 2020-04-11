@@ -3,6 +3,9 @@ import org.rocksdb.WriteOptions
 import org.{ rocksdb => jrocks }
 import zio._
 
+/**
+ * LiveTransaction provides a ZIO based api on top of the rocksdb.Transaction type.
+ */
 final class LiveTransaction private (jTransaction: jrocks.Transaction) extends TransactionDB.TransactionService {
   override def get(readOptions: jrocks.ReadOptions, key: Bytes): Task[Option[Bytes]] = Task {
     Option(jTransaction.get(readOptions, key))
