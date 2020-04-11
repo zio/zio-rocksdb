@@ -6,7 +6,7 @@ import zio.{ UIO, ZLayer, ZManaged }
 /**
  * LiveTransactionDB provides a ZIO based api on top of the rocksdb.TransactionDB type.
  */
-final class LiveTransactionDB private (transactionDB: jrocks.TransactionDB) extends TransactionDB.Service {
+final class Live private (transactionDB: jrocks.TransactionDB) extends TransactionDB.Service {
   private def close = UIO {
     transactionDB.close()
   }
@@ -15,7 +15,10 @@ final class LiveTransactionDB private (transactionDB: jrocks.TransactionDB) exte
     LiveTransaction(UIO(transactionDB.beginTransaction(writeOptions)))
 }
 
-object LiveTransactionDB {
+object Live {
+  def open(path: String): ZManaged[Any, Throwable, TransactionDB.Service] =
+    open(new jrocks.Options().setCreateIfMissing(true), path)
+
   def open(
     options: jrocks.Options,
     path: String
@@ -26,7 +29,7 @@ object LiveTransactionDB {
     transactionDBOptions: jrocks.TransactionDBOptions,
     path: String
   ): ZManaged[Any, Throwable, TransactionDB.Service] =
-    UIO(new LiveTransactionDB(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
+    UIO(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
       .toManaged(transactionDB => transactionDB.close)
 
   def live(
@@ -34,7 +37,7 @@ object LiveTransactionDB {
     transactionDBOptions: jrocks.TransactionDBOptions,
     path: String
   ): ZLayer.NoDeps[Throwable, TransactionDB] =
-    ZLayer.fromManaged(LiveTransactionDB.open(options, transactionDBOptions, path))
+    ZLayer.fromManaged(Live.open(options, transactionDBOptions, path))
 
   def live(path: String): ZLayer.NoDeps[Throwable, TransactionDB] =
     live(new jrocks.Options(), new jrocks.TransactionDBOptions(), path)

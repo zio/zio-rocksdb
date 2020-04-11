@@ -3,7 +3,6 @@ package zio.rocksdb.transaction
 import java.nio.charset.StandardCharsets.UTF_8
 
 import internal.ManagedPath
-import org.{ rocksdb => jrocks }
 import zio.duration._
 import zio.test.Assertion.{ equalTo, isSome }
 import zio.test.TestAspect._
@@ -60,7 +59,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
   private def dbLayer: ZLayer[Any, TestFailure[Nothing], TransactionDB] =
     ZLayer
       .fromManaged(ManagedPath() >>= { dir =>
-        LiveTransactionDB.open(new jrocks.Options().setCreateIfMissing(true), dir.toAbsolutePath.toString)
+        Live.open(dir.toAbsolutePath.toString)
       })
       .mapError(TestFailure.die)
 
