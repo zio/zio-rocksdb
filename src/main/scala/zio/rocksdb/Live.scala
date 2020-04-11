@@ -8,7 +8,7 @@ import zio.stream._
 
 import scala.jdk.CollectionConverters._
 
-final class Live private (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB.Service {
+class Live protected[rocksdb] (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB.Service {
   def delete(key: Array[Byte]): Task[Unit] =
     Task(db.delete(key))
 

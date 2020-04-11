@@ -6,7 +6,9 @@ import zio.{ UIO, ZLayer, ZManaged }
 /**
  * LiveTransactionDB provides a ZIO based api on top of the rocksdb.TransactionDB type.
  */
-final class Live private (transactionDB: jrocks.TransactionDB) extends TransactionDB.Service {
+final class Live private (transactionDB: jrocks.TransactionDB)
+    extends zio.rocksdb.Live(transactionDB, Nil)
+    with TransactionDB.Service {
   private def close = UIO {
     transactionDB.close()
   }

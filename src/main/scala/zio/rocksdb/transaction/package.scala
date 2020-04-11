@@ -47,7 +47,7 @@ package object transaction {
       def rollback: Task[Unit]
     }
 
-    trait Service {
+    trait Service extends RocksDB.Service {
 
       /**
        * Creates a new Transaction object.
