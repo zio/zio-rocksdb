@@ -1,16 +1,12 @@
 package zio.rocksdb
 
-import java.io.File
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.Files
 
+import internal.ManagedPath
 import org.rocksdb.Options
-import zio.{ RIO, Task, UIO, ZLayer }
-import zio.rocksdb
-import zio.test._
+import zio._
 import zio.test.Assertion._
-
-import scala.jdk.CollectionConverters._
+import zio.test._
 
 object RocksDBSpec extends DefaultRunnableSpec {
   override def spec = {
@@ -49,22 +45,9 @@ object RocksDBSpec extends DefaultRunnableSpec {
     rocksSuite.provideCustomLayerShared(database)
   }
 
-  private val database =
-    ZLayer.fromManaged {
-      Task(Files.createTempDirectory("zio-rocksdb")).toManaged { path =>
-        UIO {
-          Files
-            .walk(path)
-            .iterator()
-            .asScala
-            .toList
-            .map(_.toFile)
-            .sorted((o1: File, o2: File) => -o1.compareTo(o2))
-            .foreach(_.delete)
-        }
-      }.flatMap { dir =>
-        val opts = new Options().setCreateIfMissing(true)
-        Live.open(opts, dir.toAbsolutePath.toString)
-      }
-    }.mapError(TestFailure.die)
+  private val database = ZLayer
+    .fromManaged(ManagedPath() >>= { dir =>
+      Live.open(new Options().setCreateIfMissing(true), dir.toAbsolutePath.toString)
+    })
+    .mapError(TestFailure.die)
 }
