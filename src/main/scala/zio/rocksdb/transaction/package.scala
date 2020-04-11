@@ -5,10 +5,10 @@ import zio._
 
 package object transaction {
   type Bytes         = Array[Byte]
-  type Transaction   = Has[RocksDB.TransactionService]
-  type TransactionDB = Has[RocksDB.Service]
+  type Transaction   = Has[TransactionDB.TransactionService]
+  type TransactionDB = Has[TransactionDB.Service]
 
-  object RocksDB {
+  object TransactionDB {
     trait TransactionService {
 
       /**
