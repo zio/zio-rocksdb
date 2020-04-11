@@ -19,6 +19,12 @@ final class ZTransaction private (jTransaction: jrocks.Transaction) extends Rock
   def commit: Task[Unit] = Task {
     jTransaction.commit()
   }
+  def close: UIO[Unit] = UIO {
+    jTransaction.close()
+  }
+  override def rollback: Task[Unit] = Task {
+    jTransaction.rollback()
+  }
 }
 object ZTransaction {
   def create(jTransaction: UIO[jrocks.Transaction]): ZIO[Any, Nothing, ZTransaction] =

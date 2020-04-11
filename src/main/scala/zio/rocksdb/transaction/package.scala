@@ -35,6 +35,16 @@ package object transaction {
        * Commits all the updates in transaction to the database.
        */
       def commit: Task[Unit]
+
+      /**
+       * Closes the current transaction.
+       */
+      def close: UIO[Unit]
+
+      /**
+       * Discard all batched writes in this transaction.
+       */
+      def rollback: Task[Unit]
     }
 
     trait TransactionDBService {
@@ -50,12 +60,12 @@ package object transaction {
   def get(readOptions: jrocks.ReadOptions, key: Bytes): RIO[Transaction, Option[Bytes]] =
     ZIO.accessM[Transaction](_.get.get(readOptions, key))
   def get(key: Bytes): RIO[Transaction, Option[Bytes]] = get(new jrocks.ReadOptions(), key)
-
   def getForUpdate(readOptions: jrocks.ReadOptions, key: Bytes, exclusive: Boolean): RIO[Transaction, Option[Bytes]] =
     ZIO.accessM[Transaction](_.get.getForUpdate(readOptions, key, exclusive))
   def getForUpdate(key: Bytes, exclusive: Boolean): RIO[Transaction, Option[Bytes]] =
     getForUpdate(new jrocks.ReadOptions(), key, exclusive)
-
+  def commit: RIO[Transaction, Unit]                        = ZIO.accessM[Transaction](_.get.commit)
+  def rollback: RIO[Transaction, Unit]                      = ZIO.accessM[Transaction](_.get.rollback)
   def put(key: Bytes, value: Bytes): RIO[Transaction, Unit] = ZIO.accessM[Transaction](_.get.put(key, value))
   def delete(key: Bytes): RIO[Transaction, Unit]            = ZIO.accessM[Transaction](_.get.delete(key))
 }
