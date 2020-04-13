@@ -53,6 +53,7 @@ package object transaction {
        * Creates a new Transaction object.
        */
       def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[TransactionService]
+      def asRocksDB: RocksDB.Service
     }
   }
 

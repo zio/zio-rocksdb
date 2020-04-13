@@ -2,6 +2,7 @@ package zio.rocksdb.transaction
 import org.rocksdb.WriteOptions
 import org.{ rocksdb => jrocks }
 import zio.{ UIO, ZLayer, ZManaged }
+import zio.rocksdb.RocksDB
 
 /**
  * LiveTransactionDB provides a ZIO based api on top of the rocksdb.TransactionDB type.
@@ -15,6 +16,8 @@ final class Live private (transactionDB: jrocks.TransactionDB)
 
   override def beginTransaction(writeOptions: WriteOptions): UIO[TransactionDB.TransactionService] =
     LiveTransaction(UIO(transactionDB.beginTransaction(writeOptions)))
+
+  def asRocksDB: RocksDB.Service = this
 }
 
 object Live {
