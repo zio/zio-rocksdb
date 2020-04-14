@@ -34,9 +34,13 @@ object RocksDBSpec extends DefaultRunnableSpec {
       val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
       for {
-        _          <- RIO.foreach_(data) { case (k, v) => rocksdb.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
-        results    <- rocksdb.newIterator.runCollect
-        resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
+        _ <- RIO.foreach_(data) {
+              case (k, v) => rocksdb.put(k.getBytes(UTF_8), v.getBytes(UTF_8))
+            }
+        results <- rocksdb.newIterator.runCollect
+        resultsStr = results.map {
+          case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8)
+        }
       } yield assert(resultsStr)(hasSameElements(data))
     }
   )
@@ -44,18 +48,26 @@ object RocksDBSpec extends DefaultRunnableSpec {
   override def spec =
     suite("db")(
       suite("rocksdb")(rocksSuite: _*).provideCustomLayerShared(database),
-      suite("transactiondb")(rocksSuite: _*).provideCustomLayerShared(tdatabase)
+      suite("transactiondb")(rocksSuite: _*).provideCustomLayerShared(tDatabase)
     )
 
-  private val database = ZLayer
+  private val database: ZLayer[Any, TestFailure[Nothing], RocksDB] = ZLayer
     .fromManaged(ManagedPath() >>= { dir =>
-      Live.open(new Options().setCreateIfMissing(true), dir.toAbsolutePath.toString)
+      Live.open(
+        new Options().setCreateIfMissing(true),
+        dir.toAbsolutePath.toString
+      )
     })
     .mapError(TestFailure.die)
 
-  private val tdatabase = ZLayer
+  private val tDatabase: ZLayer[Any, TestFailure[Nothing], RocksDB] = ZLayer
     .fromManaged(ManagedPath() >>= { dir =>
-      transaction.Live.open(new Options().setCreateIfMissing(true), dir.toAbsolutePath.toString).map(_.asRocksDB)
+      transaction.Live
+        .open(
+          new Options().setCreateIfMissing(true),
+          dir.toAbsolutePath.toString
+        )
+        .map(_.asInstanceOf[RocksDB.Service])
     })
     .mapError(TestFailure.die)
 }
