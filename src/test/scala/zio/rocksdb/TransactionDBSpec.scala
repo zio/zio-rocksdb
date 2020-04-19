@@ -64,9 +64,11 @@ object TransactionDBSpec extends DefaultRunnableSpec {
         for {
           _ <- TransactionDB.put(key, 0.toString.getBytes(UTF_8))
           _ <- concurrent(count) {
-                TransactionDB.atomically(Transaction.getForUpdate(key, exclusive = true) >>= { iCount =>
-                  Transaction.put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(-1).toString.getBytes(UTF_8))
-                })
+                TransactionDB.atomically {
+                  Transaction.getForUpdate(key, exclusive = true) >>= { iCount =>
+                    Transaction.put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(-1).toString.getBytes(UTF_8))
+                  }
+                }
               }
           actual <- TransactionDB.get(key)
         } yield assert(actual.map(bytesToInt))(expected)

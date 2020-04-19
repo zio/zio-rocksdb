@@ -4,12 +4,14 @@ import org.{ rocksdb => jrocks }
 import zio._
 
 object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
-
   private final class Live(db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[service.Transaction] =
       UIO(Transaction(db.beginTransaction(writeOptions)))
     override def beginTransaction: UIO[service.Transaction] =
       beginTransaction(new jrocks.WriteOptions())
+
+    override def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A]): ZIO[R, E, A] =
+      (zio <* Transaction.commit).provideSomeLayer[R](beginTransaction.toLayer)
   }
 
   object Live {
@@ -24,6 +26,8 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
 
     def open(options: jrocks.Options, path: String): Managed[Throwable, service.TransactionDB] =
       open(options, new jrocks.TransactionDBOptions(), path)
+    def open(path: String): Managed[Throwable, service.TransactionDB] =
+      open(new jrocks.Options(), path)
   }
 
   def live(
@@ -42,5 +46,8 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
     beginTransaction(new jrocks.WriteOptions())
 
   def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A]): ZIO[TransactionDB with R, E, A] =
-    (zio <* Transaction.commit).provideSomeLayer[TransactionDB with R](Transaction.live)
+    for {
+      db     <- RIO.access[TransactionDB](_.get)
+      result <- db.atomically[R, E, A](zio)
+    } yield result
 }
