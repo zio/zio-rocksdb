@@ -6,7 +6,7 @@ import zio.rocksdb.Atomically
 
 trait TransactionDB extends RocksDB {
   def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[Transaction]
-  def beginTransaction: UIO[Transaction]
+  def beginTransaction: UIO[Transaction] = beginTransaction(new jrocks.WriteOptions())
   def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Has[Transaction] with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[R, E, A]

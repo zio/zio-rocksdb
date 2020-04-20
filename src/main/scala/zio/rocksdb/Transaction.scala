@@ -9,14 +9,11 @@ object Transaction {
     override def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): Task[Option[Array[Byte]]] = Task {
       Option(transaction.get(readOptions, key))
     }
-    override def get(key: Array[Byte]): Task[Option[Array[Byte]]] = get(new jrocks.ReadOptions(), key)
     override def getForUpdate(
       readOptions: ReadOptions,
       key: Array[Byte],
       exclusive: Boolean
-    ): Task[Option[Array[Byte]]] = Task { Option(transaction.getForUpdate(readOptions, key, exclusive)) }
-    override def getForUpdate(key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]] =
-      getForUpdate(new jrocks.ReadOptions(), key, exclusive)
+    ): Task[Option[Array[Byte]]]                                       = Task { Option(transaction.getForUpdate(readOptions, key, exclusive)) }
     override def put(key: Array[Byte], value: Array[Byte]): Task[Unit] = Task { transaction.put(key, value) }
     override def delete(key: Array[Byte]): Task[Unit]                  = Task { transaction.delete(key) }
     override def commit: Task[Unit]                                    = Task { transaction.commit() }

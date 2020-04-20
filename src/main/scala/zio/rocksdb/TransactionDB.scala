@@ -3,23 +3,20 @@ package zio.rocksdb
 import org.{ rocksdb => jrocks }
 import zio._
 
-object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
+object TransactionDB extends Operations[TransactionDB, service.TransactionDB] { self =>
   private final class Live(db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[service.Transaction] =
       UIO(Transaction(db.beginTransaction(writeOptions)))
 
-    override def beginTransaction: UIO[service.Transaction] =
-      beginTransaction(new jrocks.WriteOptions())
-
     override def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A])(
       implicit A: Atomically.TransactionWithSomething
     ): ZIO[R, E, A] =
-      (zio <* Transaction.commit).provideSomeLayer[R](beginTransaction.toLayer)
+      (zio <* Transaction.commit).provideSomeLayer[R](super.beginTransaction.toLayer)
 
     override def atomically[E >: Throwable, A](zio: ZIO[Transaction, E, A])(
       implicit A: Atomically.TransactionOnly
     ): IO[E, A] =
-      (zio <* Transaction.commit).provideLayer(beginTransaction.toLayer)
+      (zio <* Transaction.commit).provideLayer(super.beginTransaction.toLayer)
   }
 
   object Live {
