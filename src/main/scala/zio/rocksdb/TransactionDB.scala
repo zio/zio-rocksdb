@@ -8,15 +8,17 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] { 
     override def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[service.Transaction] =
       UIO(Transaction(db.beginTransaction(writeOptions)))
 
-    override def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A])(
+    override def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
+      zio: ZIO[Transaction with R, E, A]
+    )(
       implicit A: Atomically.TransactionWithSomething
     ): ZIO[R, E, A] =
-      (zio <* Transaction.commit).provideSomeLayer[R](super.beginTransaction.toLayer)
+      (zio <* Transaction.commit).provideSomeLayer[R](beginTransaction(writeOptions).toLayer)
 
-    override def atomically[E >: Throwable, A](zio: ZIO[Transaction, E, A])(
+    override def atomically[E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction, E, A])(
       implicit A: Atomically.TransactionOnly
     ): IO[E, A] =
-      (zio <* Transaction.commit).provideLayer(super.beginTransaction.toLayer)
+      (zio <* Transaction.commit).provideLayer(beginTransaction(writeOptions).toLayer)
   }
 
   object Live {
@@ -50,10 +52,20 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] { 
   def beginTransaction(): URIO[TransactionDB, service.Transaction] =
     beginTransaction(new jrocks.WriteOptions())
 
+  def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction with R, E, A])(
+    implicit A: Atomically.TransactionWithSomething
+  ): ZIO[TransactionDB with R, E, A] =
+    RIO.access[TransactionDB](_.get) >>= { _.atomically[R, E, A](writeOptions)(zio) }
+
   def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[TransactionDB with R, E, A] =
     RIO.access[TransactionDB](_.get) >>= { _.atomically[R, E, A](zio) }
+
+  def atomically[E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
+    zio: ZIO[Transaction, E, A]
+  )(implicit A: Atomically.TransactionOnly): ZIO[TransactionDB, E, A] =
+    RIO.access[TransactionDB](_.get) >>= { _.atomically[E, A](writeOptions)(zio) }
 
   def atomically[E >: Throwable, A](
     zio: ZIO[Transaction, E, A]
