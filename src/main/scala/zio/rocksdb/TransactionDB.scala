@@ -3,8 +3,8 @@ package zio.rocksdb
 import org.{ rocksdb => jrocks }
 import zio._
 
-object TransactionDB extends Operations[TransactionDB, service.TransactionDB] { self =>
-  private final class Live(db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
+object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
+  private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Nothing, service.Transaction] =
       Transaction.begin(db, writeOptions)
 
