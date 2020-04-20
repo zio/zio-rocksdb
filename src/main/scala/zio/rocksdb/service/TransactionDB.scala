@@ -1,12 +1,12 @@
 package zio.rocksdb.service
 
 import org.{ rocksdb => jrocks }
-import zio.{ Has, UIO, ZIO }
+import zio.{ Has, ZIO, ZManaged }
 import zio.rocksdb.Atomically
 
 trait TransactionDB extends RocksDB {
-  def beginTransaction(writeOptions: jrocks.WriteOptions): UIO[Transaction]
-  def beginTransaction: UIO[Transaction] = beginTransaction(new jrocks.WriteOptions())
+  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Nothing, Transaction]
+  def beginTransaction: ZManaged[Any, Nothing, Transaction] = beginTransaction(new jrocks.WriteOptions())
   def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
     zio: ZIO[Has[Transaction] with R, E, A]
   )(implicit A: Atomically.TransactionWithSomething): ZIO[R, E, A]

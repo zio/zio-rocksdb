@@ -5,7 +5,7 @@ import zio._
 
 object Transaction {
 
-  private final class Live(transaction: jrocks.Transaction) extends service.Transaction {
+  private final class Live private (transaction: jrocks.Transaction) extends service.Transaction {
     override def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): Task[Option[Array[Byte]]] = Task {
       Option(transaction.get(readOptions, key))
     }
@@ -21,21 +21,32 @@ object Transaction {
     override def rollback: Task[Unit]                                  = Task { transaction.rollback() }
   }
 
-  object Live {
-    def open(writeOptions: jrocks.WriteOptions): ZManaged[TransactionDB, Throwable, service.Transaction] =
-      ZIO.accessM[TransactionDB](_.get.beginTransaction(writeOptions)).toManaged(_.close)
-
-    def open: ZManaged[TransactionDB, Throwable, service.Transaction] = open(new jrocks.WriteOptions())
+  private object Live {
+    def apply(
+      db: jrocks.TransactionDB,
+      writeOptions: jrocks.WriteOptions
+    ): UIO[service.Transaction] = UIO(new Live(db.beginTransaction(writeOptions)))
   }
 
-  def live(writeOptions: jrocks.WriteOptions): ZLayer[TransactionDB, Throwable, Transaction] =
-    Live.open(writeOptions).toLayer
+  private def make(
+    db: jrocks.TransactionDB,
+    writeOptions: jrocks.WriteOptions
+  ): UIO[service.Transaction] = Live(db, writeOptions)
 
-  def live: ZLayer[TransactionDB, Throwable, Transaction] =
-    Live.open.toLayer
+  def begin(
+    db: jrocks.TransactionDB,
+    writeOptions: jrocks.WriteOptions
+  ): ZManaged[Any, Nothing, service.Transaction] =
+    Transaction.make(db, writeOptions).toManaged(_.close)
 
-  def apply(transaction: jrocks.Transaction): service.Transaction =
-    new Live(transaction)
+  def begin(db: jrocks.TransactionDB): ZManaged[Any, Nothing, service.Transaction] =
+    begin(db, new jrocks.WriteOptions())
+
+  def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Nothing, Transaction] =
+    begin(db, writeOptions).toLayer
+
+  def live(db: jrocks.TransactionDB): ZLayer[Any, Nothing, Transaction] =
+    begin(db).toLayer
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
     RIO.accessM(_.get.get(readOptions, key))
