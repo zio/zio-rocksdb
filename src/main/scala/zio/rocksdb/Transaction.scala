@@ -25,14 +25,14 @@ object Transaction {
     def begin(
       db: jrocks.TransactionDB,
       writeOptions: jrocks.WriteOptions
-    ): ZManaged[Any, Nothing, service.Transaction] =
+    ): ZManaged[Any, Throwable, service.Transaction] =
       UIO(new Live(db.beginTransaction(writeOptions))).toManaged(_.close)
   }
 
-  def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Nothing, Transaction] =
+  def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Throwable, Transaction] =
     Live.begin(db, writeOptions).toLayer
 
-  def live(db: jrocks.TransactionDB): ZLayer[Any, Nothing, Transaction] =
+  def live(db: jrocks.TransactionDB): ZLayer[Any, Throwable, Transaction] =
     live(db)
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =

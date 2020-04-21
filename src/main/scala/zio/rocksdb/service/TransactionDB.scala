@@ -9,12 +9,12 @@ trait TransactionDB extends RocksDB {
   /**
    * Creates a managed instance of `service.Transaction` using the provided `WriteOptions`.
    */
-  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Nothing, Transaction]
+  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, Transaction]
 
   /**
    * Creates a managed instance of `service.Transaction`.
    */
-  def beginTransaction: ZManaged[Any, Nothing, Transaction] = beginTransaction(new jrocks.WriteOptions())
+  def beginTransaction: ZManaged[Any, Throwable, Transaction] = beginTransaction(new jrocks.WriteOptions())
 
   /**
    * Executes the provided zio program in a single transaction.

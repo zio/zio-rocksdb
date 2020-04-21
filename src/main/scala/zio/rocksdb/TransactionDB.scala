@@ -5,7 +5,7 @@ import zio._
 
 object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
   private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
-    override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Nothing, service.Transaction] =
+    override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, service.Transaction] =
       Transaction.Live.begin(db, writeOptions)
 
     override def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
@@ -46,13 +46,13 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
   def live(options: jrocks.Options, path: String): ZLayer[Any, Throwable, TransactionDB] =
     live(options, new jrocks.TransactionDBOptions(), path)
 
-  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[TransactionDB, Nothing, service.Transaction] =
+  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[TransactionDB, Throwable, service.Transaction] =
     for {
       db          <- ZIO.access[TransactionDB](_.get).toManaged_
       transaction <- db.beginTransaction(writeOptions)
     } yield transaction
 
-  def beginTransaction(): ZManaged[TransactionDB, Nothing, service.Transaction] =
+  def beginTransaction(): ZManaged[TransactionDB, Throwable, service.Transaction] =
     beginTransaction(new jrocks.WriteOptions())
 
   def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction with R, E, A])(
