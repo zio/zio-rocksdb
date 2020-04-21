@@ -21,32 +21,19 @@ object Transaction {
     override def rollback: Task[Unit]                                  = Task { transaction.rollback() }
   }
 
-  private object Live {
-    def apply(
+  object Live {
+    def begin(
       db: jrocks.TransactionDB,
       writeOptions: jrocks.WriteOptions
-    ): UIO[service.Transaction] = UIO(new Live(db.beginTransaction(writeOptions)))
+    ): ZManaged[Any, Nothing, service.Transaction] =
+      UIO(new Live(db.beginTransaction(writeOptions))).toManaged(_.close)
   }
 
-  private def make(
-    db: jrocks.TransactionDB,
-    writeOptions: jrocks.WriteOptions
-  ): UIO[service.Transaction] = Live(db, writeOptions)
-
-  def begin(
-    db: jrocks.TransactionDB,
-    writeOptions: jrocks.WriteOptions
-  ): ZManaged[Any, Nothing, service.Transaction] =
-    Transaction.make(db, writeOptions).toManaged(_.close)
-
-  def begin(db: jrocks.TransactionDB): ZManaged[Any, Nothing, service.Transaction] =
-    begin(db, new jrocks.WriteOptions())
-
   def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Nothing, Transaction] =
-    begin(db, writeOptions).toLayer
+    Live.begin(db, writeOptions).toLayer
 
   def live(db: jrocks.TransactionDB): ZLayer[Any, Nothing, Transaction] =
-    begin(db).toLayer
+    live(db)
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
     RIO.accessM(_.get.get(readOptions, key))

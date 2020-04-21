@@ -6,7 +6,7 @@ import zio._
 object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
   private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Nothing, service.Transaction] =
-      Transaction.begin(db, writeOptions)
+      Transaction.Live.begin(db, writeOptions)
 
     override def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
       zio: ZIO[Transaction with R, E, A]
