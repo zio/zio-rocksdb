@@ -26,7 +26,7 @@ object Transaction {
       db: jrocks.TransactionDB,
       writeOptions: jrocks.WriteOptions
     ): ZManaged[Any, Throwable, service.Transaction] =
-      UIO(new Live(db.beginTransaction(writeOptions))).toManaged(_.close)
+      Task(new Live(db.beginTransaction(writeOptions))).toManaged(_.close)
   }
 
   def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Throwable, Transaction] =
