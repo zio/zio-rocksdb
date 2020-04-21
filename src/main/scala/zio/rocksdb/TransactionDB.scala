@@ -19,6 +19,8 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
       implicit A: Atomically.TransactionOnly
     ): IO[E, A] =
       (zio <* Transaction.commit).provideLayer(Transaction.live(db, writeOptions))
+
+    private def closeE: Task[Unit] = Task { db.closeE() }
   }
 
   object Live {
@@ -27,9 +29,8 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
       transactionDBOptions: jrocks.TransactionDBOptions,
       path: String
     ): Managed[Throwable, service.TransactionDB] =
-      Task(jrocks.TransactionDB.open(options, transactionDBOptions, path))
-        .toManaged(k => Task(k.closeE()).orDie)
-        .map(new Live(_))
+      Task(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
+        .toManaged(_.closeE.orDie)
 
     def open(options: jrocks.Options, path: String): Managed[Throwable, service.TransactionDB] =
       open(options, new jrocks.TransactionDBOptions(), path)
