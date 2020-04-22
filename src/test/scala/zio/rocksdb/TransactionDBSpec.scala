@@ -72,8 +72,17 @@ object TransactionDBSpec extends DefaultRunnableSpec {
               }
           actual <- TransactionDB.get(key)
         } yield assert(actual.map(bytesToInt))(expected)
-      }
-    ) @@ timeout(1 second)
+      },
+      testM("thread safety inside transaction") {
+        checkM(byteArray, byteArray) { (b1, b2) =>
+          for {
+            _ <- TransactionDB.atomically {
+                  Transaction.put(b1, b2) <&> Transaction.put(b2, b1)
+                }
+          } yield assertCompletes
+        }
+      } @@ nonFlaky(10)
+    ) @@ timeout(5 second)
 
     rocksSuite.provideCustomLayerShared(database)
   }
@@ -88,4 +97,5 @@ object TransactionDBSpec extends DefaultRunnableSpec {
     }
   } yield db).toLayer.mapError(TestFailure.die)
 
+  private def byteArray = Gen.listOf(Gen.anyByte).map(_.toArray)
 }
