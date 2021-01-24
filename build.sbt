@@ -1,5 +1,5 @@
-val mainScala = "2.12.10"
-val allScala  = Seq(mainScala, "2.13.1")
+val mainScala = "2.12.12"
+val allScala  = Seq(mainScala, "2.13.3")
 
 inThisBuild(
   List(
@@ -29,15 +29,12 @@ inThisBuild(
   )
 )
 
-ThisBuild / publishTo := sonatypePublishToBundle.value
-
 name := "zio-rocksdb"
 scalafmtOnCompile := true
 
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
-buildInfoObject := "BuildInfo"
 
 libraryDependencies ++= Seq(
   "dev.zio"                %% "zio-streams"             % "1.0.0-RC18",

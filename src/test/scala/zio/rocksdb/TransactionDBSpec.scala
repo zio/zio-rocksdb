@@ -8,7 +8,7 @@ import zio.rocksdb.internal.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ console, RIO, ZIO }
+import zio.{ RIO, ZIO }
 
 import scala.language.postfixOps
 
@@ -52,7 +52,6 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           result <- TransactionDB.atomically(for {
                      _      <- Transaction.put(key, value)
                      result <- Transaction.get(key)
-                     _      <- console.putStrLn(result.toString)
                    } yield result)
         } yield assert(result)(isSome(equalTo(value)))
       },
