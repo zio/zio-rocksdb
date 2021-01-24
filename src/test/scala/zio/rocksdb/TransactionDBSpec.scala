@@ -52,7 +52,6 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           result <- TransactionDB.atomically(for {
                      _      <- Transaction.put(key, value)
                      result <- Transaction.get(key)
-                     _      <- console.putStrLn(result.toString)
                    } yield result)
         } yield assert(result)(isSome(equalTo(value)))
       },
