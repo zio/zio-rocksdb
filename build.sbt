@@ -35,7 +35,6 @@ scalafmtOnCompile := true
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
-buildInfoObject := "BuildInfo"
 
 libraryDependencies ++= Seq(
   "dev.zio"                %% "zio-streams"             % "1.0.0-RC18",
