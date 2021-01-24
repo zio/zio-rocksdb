@@ -29,8 +29,6 @@ inThisBuild(
   )
 )
 
-ThisBuild / publishTo := sonatypePublishToBundle.value
-
 name := "zio-rocksdb"
 scalafmtOnCompile := true
 
