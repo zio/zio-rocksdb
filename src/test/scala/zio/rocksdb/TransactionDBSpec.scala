@@ -8,7 +8,7 @@ import zio.rocksdb.internal.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ console, RIO, ZIO }
+import zio.{ RIO, ZIO }
 
 import scala.language.postfixOps
 
