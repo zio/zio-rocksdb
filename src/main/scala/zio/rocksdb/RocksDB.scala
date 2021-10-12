@@ -37,11 +37,11 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       }
 
     private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-        ZStream.fromEffect(Task(it.isValid)).flatMap { valid =>
+      ZStream.fromZIO(Task(it.seekToFirst())).drain ++
+        ZStream.fromZIO(Task(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
-            ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.repeatEffectOption {
+            ZStream.fromZIO(Task(it.key() -> it.value())) ++ ZStream.repeatZIOOption {
               Task {
                 it.next()
 
@@ -53,19 +53,23 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
 
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator()))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator()))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
       ZStream
-        .bracket(Task(db.newIterators(cfHandles.asJava)))(its => UIO.foreach(its.asScala)(it => UIO(it.close())))
+        .acquireReleaseWith(
+          Task(db.newIterators(cfHandles.asJava))
+        )(
+          iterators => UIO.foreach(iterators.asScala.toSeq)(iterator => UIO(iterator.close()))
+        )
         .flatMap { its =>
           ZStream.fromIterable {
             cfHandles.zip(its.asScala.toList.map(drainIterator))
@@ -104,7 +108,11 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       db: Task[jrocks.RocksDB],
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Managed[Throwable, service.RocksDB] =
-      db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
+      ZManaged
+        .acquireReleaseWith(db)(
+          db => ZIO.succeed(db.closeE())
+        )
+        .map(new Live(_, cfHandles))
   }
 
   /**
@@ -114,18 +122,18 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
     options: jrocks.DBOptions,
     path: String,
     cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-  ): ZLayer.NoDeps[Throwable, RocksDB] =
+  ): Layer[Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(options, path, cfDescriptors))
 
   /**
    * Opens the default ColumnFamily for the database at the specified path.
    */
-  def live(path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+  def live(path: String): Layer[Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(path))
 
   /**
    * Opens the default ColumnFamily for the database at the specified path.
    */
-  def live(options: jrocks.Options, path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+  def live(options: jrocks.Options, path: String): Layer[Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(options, path))
 }

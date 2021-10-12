@@ -3,8 +3,8 @@ package zio.rocksdb
 import java.nio.charset.StandardCharsets.UTF_8
 
 import org.{ rocksdb => jrocks }
-import zio.duration._
-import zio.rocksdb.internal.internal.ManagedPath
+import zio.durationInt
+import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -15,7 +15,7 @@ import scala.language.postfixOps
 object TransactionDBSpec extends DefaultRunnableSpec {
   override def spec = {
     val rocksSuite = suite("TransactionDB")(
-      testM("get/put") {
+      test("get/put") {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
 
@@ -24,7 +24,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           result <- TransactionDB.get(key)
         } yield assert(result)(isSome(equalTo(value)))
       },
-      testM("delete") {
+      test("delete") {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
 
@@ -35,16 +35,16 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           after  <- TransactionDB.get(key)
         } yield assert(before)(isSome(equalTo(value))) && assert(after)(isNone)
       },
-      testM("newIterator") {
+      test("newIterator") {
         val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
         for {
-          _          <- RIO.foreach_(data) { case (k, v) => TransactionDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+          _          <- RIO.foreachDiscard(data) { case (k, v) => TransactionDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
           results    <- TransactionDB.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))
       },
-      testM("get/put with Console") {
+      test("get/put with Console") {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
 
@@ -55,7 +55,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
                    } yield result)
         } yield assert(result)(isSome(equalTo(value)))
       },
-      testM("concurrent updates to the same key") {
+      test("concurrent updates to the same key") {
         val count    = 10
         val key      = "COUNT".getBytes(UTF_8)
         val expected = isSome(equalTo(count))
@@ -64,7 +64,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           _ <- TransactionDB.put(key, 0.toString.getBytes(UTF_8))
           _ <- concurrent(count) {
                 TransactionDB.atomically {
-                  Transaction.getForUpdate(key, exclusive = true) >>= { iCount =>
+                  Transaction.getForUpdate(key, exclusive = true) flatMap { iCount =>
                     Transaction.put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(-1).toString.getBytes(UTF_8))
                   }
                 }
@@ -72,7 +72,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
           actual <- TransactionDB.get(key)
         } yield assert(actual.map(bytesToInt))(expected)
       },
-      testM("thread safety inside transaction") {
+      test("thread safety inside transaction") {
         checkM(byteArray, byteArray) { (b1, b2) =>
           for {
             _ <- TransactionDB.atomically {
@@ -85,8 +85,9 @@ object TransactionDBSpec extends DefaultRunnableSpec {
 
     rocksSuite.provideCustomLayerShared(database)
   }
-  private def bytesToInt(bytes: Array[Byte]): Int                                = new String(bytes, UTF_8).toInt
-  private def concurrent[R, E, A](n: Int)(zio: ZIO[R, E, A]): ZIO[R, E, List[A]] = ZIO.foreachPar(0 until n)(_ => zio)
+  private def bytesToInt(bytes: Array[Byte]): Int = new String(bytes, UTF_8).toInt
+  private def concurrent[R, E, A](n: Int)(zio: ZIO[R, E, A]): ZIO[R, E, Seq[A]] =
+    ZIO.collectAllPar((0 until n).map(_ => zio))
 
   private val database = (for {
     dir <- ManagedPath()

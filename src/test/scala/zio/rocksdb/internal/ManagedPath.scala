@@ -1,7 +1,5 @@
 package zio.rocksdb.internal
 
-package internal
-
 import java.io.IOException
 import java.nio.file.{ Files, Path }
 
@@ -19,10 +17,10 @@ object ManagedPath {
   }
 
   private def deleteDirectoryE(path: Path): UIO[Unit] =
-    deleteDirectory(path) >>= {
+    deleteDirectory(path) flatMap {
       case true  => ZIO.unit
       case false => ZIO.die(new IOException("Could not delete path recursively"))
     }
 
-  def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManaged(deleteDirectoryE)
+  def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManagedWith(deleteDirectoryE)
 }

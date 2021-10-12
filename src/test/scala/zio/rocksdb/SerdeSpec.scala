@@ -25,20 +25,20 @@ object SerdeSpec extends DefaultRunnableSpec {
       ),
       roundtrip(
         "tuple3",
-        (Gen.anyInt zip Gen.anyInt zip Gen.anyInt).map { case ((a, b), c) => (a, b, c) },
+        (Gen.anyInt zip Gen.anyInt zip Gen.anyInt).map { case (a, b, c) => (a, b, c) },
         Serializer.tuple3(Serializer.int, Serializer.int, Serializer.int),
         Deserializer.tuple3(Deserializer.int, Deserializer.int, Deserializer.int)
       ),
       roundtrip(
         "tuple4",
-        (Gen.anyInt zip Gen.anyInt zip Gen.anyInt zip Gen.anyInt).map { case (((a, b), c), d) => (a, b, c, d) },
+        (Gen.anyInt zip Gen.anyInt zip Gen.anyInt zip Gen.anyInt).map { case (a, b, c, d) => (a, b, c, d) },
         Serializer.tuple4(Serializer.int, Serializer.int, Serializer.int, Serializer.int),
         Deserializer.tuple4(Deserializer.int, Deserializer.int, Deserializer.int, Deserializer.int)
       ),
       roundtrip(
         "tuple5",
         (Gen.anyInt zip Gen.anyInt zip Gen.anyInt zip Gen.anyInt zip Gen.anyInt).map {
-          case ((((a, b), c), d), e) => (a, b, c, d, e)
+          case (a, b, c, d, e) => (a, b, c, d, e)
         },
         Serializer.tuple5(Serializer.int, Serializer.int, Serializer.int, Serializer.int, Serializer.int),
         Deserializer
@@ -62,7 +62,7 @@ object SerdeSpec extends DefaultRunnableSpec {
   )
 
   private def roundtrip[R, A](label: String, gen: Gen[R, A], ser: Serializer[R, A], deser: Deserializer[R, A]) =
-    testM(label)(checkM(gen) { x =>
-      assertM(ser(x) >>= deser.decode)(equalTo(Result(x, Chunk.empty)))
+    test(label)(checkM(gen) { x =>
+      assertM(ser(x) flatMap deser.decode)(equalTo(Result(x, Chunk.empty)))
     })
 }

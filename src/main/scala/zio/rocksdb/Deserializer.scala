@@ -2,7 +2,7 @@ package zio.rocksdb
 
 import java.{ lang => jlang }
 import java.nio.ByteBuffer
-import zio.{ Chunk, Ref, Schedule, UIO, ZIO }
+import zio.{ Chunk, Clock, Has, Ref, Schedule, UIO, ZIO }
 
 trait Deserializer[-R, +A] { self =>
   def decode(bytes: Bytes): ZIO[R, DeserializeError, Result[A]]
@@ -57,7 +57,7 @@ private[rocksdb] trait CollectionDeserializers extends PrimitiveDeserializers {
   val byteArray: Deserializer[Any, Array[Byte]] =
     bytes.map(_.toArray)
 
-  def chunk[R, A](a: Deserializer[R, A]): Deserializer[R, Chunk[A]] =
+  def chunk[R, A](a: Deserializer[R, A]): Deserializer[R with Has[Clock], Chunk[A]] =
     bytes.mapMResult(fromByteBuffer(a))
 
   def list[R, A](as: Deserializer[R, Chunk[A]]): Deserializer[R, List[A]] =
@@ -489,7 +489,7 @@ private[rocksdb] trait DeserializerUtilityFunctions {
         if (head.size < n)
           ZIO.fail(DeserializeError.TooShort(bytes.length, n))
         else
-          ZIO.effectTotal {
+          ZIO.succeed {
             val buf = ByteBuffer.wrap(head.toArray)
             Result(f(buf), tail)
           }
@@ -498,14 +498,14 @@ private[rocksdb] trait DeserializerUtilityFunctions {
 
   def fromByteBuffer[R, A](
     deser: Deserializer[R, A]
-  )(bytes: Result[Bytes]): ZIO[R, DeserializeError, Result[Chunk[A]]] =
+  )(bytes: Result[Bytes]): ZIO[R with Has[Clock], DeserializeError, Result[Chunk[A]]] =
     for {
       bs <- Ref.make(bytes.value)
       as <- Ref.make[Chunk[A]](Chunk.empty)
       _ <- bs.get
             .flatMap(deser.decode)
             .flatMap {
-              case Result(a, bytes) => bs.set(bytes) *> as.update(_ + a)
+              case Result(a, bytes) => bs.set(bytes) *> as.update(_ :+ a)
             }
             .repeatOrElseEither[R, Any, DeserializeError, Unit](Schedule.forever, {
               case (DeserializeError.TooShort(_, _), _) => ZIO.unit

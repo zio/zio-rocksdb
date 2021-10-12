@@ -30,7 +30,7 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
       path: String
     ): Managed[Throwable, service.TransactionDB] =
       Task(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
-        .toManaged(_.closeE.orDie)
+        .toManagedWith(_.closeE.orDie)
 
     def open(options: jrocks.Options, path: String): Managed[Throwable, service.TransactionDB] =
       open(options, new jrocks.TransactionDBOptions(), path)
@@ -49,7 +49,7 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
 
   def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[TransactionDB, Throwable, service.Transaction] =
     for {
-      db          <- ZIO.access[TransactionDB](_.get).toManaged_
+      db          <- ZIO.access[TransactionDB](_.get).toManaged
       transaction <- db.beginTransaction(writeOptions)
     } yield transaction
 
@@ -59,20 +59,20 @@ object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
   def atomically[R <: Has[_], E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[TransactionDB with R, E, A] =
-    RIO.access[TransactionDB](_.get) >>= { _.atomically[R, E, A](writeOptions)(zio) }
+    RIO.access[TransactionDB](_.get) flatMap { _.atomically[R, E, A](writeOptions)(zio) }
 
   def atomically[R <: Has[_], E >: Throwable, A](zio: ZIO[Transaction with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[TransactionDB with R, E, A] =
-    RIO.access[TransactionDB](_.get) >>= { _.atomically[R, E, A](zio) }
+    RIO.access[TransactionDB](_.get) flatMap { _.atomically[R, E, A](zio) }
 
   def atomically[E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
     zio: ZIO[Transaction, E, A]
   )(implicit A: Atomically.TransactionOnly): ZIO[TransactionDB, E, A] =
-    RIO.access[TransactionDB](_.get) >>= { _.atomically[E, A](writeOptions)(zio) }
+    RIO.access[TransactionDB](_.get) flatMap { _.atomically[E, A](writeOptions)(zio) }
 
   def atomically[E >: Throwable, A](
     zio: ZIO[Transaction, E, A]
   )(implicit A: Atomically.TransactionOnly): ZIO[TransactionDB, E, A] =
-    RIO.access[TransactionDB](_.get) >>= { _.atomically[E, A](zio) }
+    RIO.access[TransactionDB](_.get) flatMap { _.atomically[E, A](zio) }
 }

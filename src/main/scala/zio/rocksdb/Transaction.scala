@@ -32,7 +32,7 @@ object Transaction {
       (for {
         semaphore   <- Semaphore.make(1)
         transaction <- Task(new Live(semaphore, db.beginTransaction(writeOptions)))
-      } yield transaction).toManaged(_.close)
+      } yield transaction).toManagedWith(_.close)
   }
 
   def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Throwable, Transaction] =
@@ -42,26 +42,26 @@ object Transaction {
     live(db)
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.get(readOptions, key))
+    RIO.accessZIO(_.get.get(readOptions, key))
   def get(key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.get(key))
+    RIO.accessZIO(_.get.get(key))
   def getForUpdate(
     readOptions: jrocks.ReadOptions,
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(readOptions, key, exclusive))
+    RIO.accessZIO(_.get.getForUpdate(readOptions, key, exclusive))
   def getForUpdate(key: Array[Byte], exclusive: Boolean): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(key, exclusive))
+    RIO.accessZIO(_.get.getForUpdate(key, exclusive))
   def put(key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.accessM(_.get.put(key, value))
+    RIO.accessZIO(_.get.put(key, value))
   def delete(key: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.accessM(_.get.delete(key))
+    RIO.accessZIO(_.get.delete(key))
   def commit: RIO[Transaction, Unit] =
-    RIO.accessM(_.get.commit)
+    RIO.accessZIO(_.get.commit)
   def close: URIO[Transaction, Unit] =
-    RIO.accessM(_.get.close)
+    RIO.accessZIO(_.get.close)
   def rollback: RIO[Transaction, Unit] =
-    RIO.accessM(_.get.rollback)
+    RIO.accessZIO(_.get.rollback)
 
 }
