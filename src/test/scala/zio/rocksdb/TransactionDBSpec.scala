@@ -82,7 +82,7 @@ object TransactionDBSpec extends DefaultRunnableSpec {
       } @@ nonFlaky(10)
     ) @@ timeout(5 second)
 
-    rocksSuite.provideCustomLayerShared(database)
+    rocksSuite.provideCustomLayer(database)
   }
   private def bytesToInt(bytes: Array[Byte]): Int = new String(bytes, UTF_8).toInt
   private def concurrent[R, E, A](
