@@ -41,7 +41,7 @@ object RocksDBSpec extends DefaultRunnableSpec {
       }
     )
 
-    rocksSuite.provideCustomLayerShared(database)
+    rocksSuite.provideCustomLayer(database)
   }
 
   private val database = (for {
