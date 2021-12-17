@@ -1,8 +1,8 @@
 package zio.rocksdb
 
 import zio.Chunk
-import zio.test._
 import zio.test.Assertion._
+import zio.test.{ assertM, checkM, DefaultRunnableSpec, Gen }
 
 object SerdeSpec extends DefaultRunnableSpec {
   override def spec = suite("SerdeSpec")(

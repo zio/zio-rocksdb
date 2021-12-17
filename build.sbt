@@ -46,6 +46,8 @@ libraryDependencies ++= Seq(
   "org.rocksdb"            % "rocksdbjni"               % "6.4.6"
 )
 
+scalacOptions --= Seq("-Xlint:nullary-override")
+
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
