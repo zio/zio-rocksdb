@@ -1,28 +1,31 @@
 package zio.rocksdb.internal
 
-package internal
+import zio.{ Task, URIO, ZManaged }
 
-import java.io.IOException
+import java.io.File
 import java.nio.file.{ Files, Path }
-
-import zio.{ Task, UIO, ZIO, ZManaged }
-
-import scala.reflect.io.Directory
 
 object ManagedPath {
   private def createTempDirectory: Task[Path] = Task {
     Files.createTempDirectory("zio-rocksdb")
   }
 
-  private def deleteDirectory(path: Path): UIO[Boolean] = UIO {
-    new Directory(path.toFile).deleteRecursively()
-  }
+  private def deleteDirectory(path: Path): Task[Unit] =
+    Task {
+      def deleteRecursively(file: File): Unit = {
+        if (file.isDirectory) {
+          file.listFiles.foreach(deleteRecursively)
+        }
+        if (file.exists && !file.delete) {
+          throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
+        }
 
-  private def deleteDirectoryE(path: Path): UIO[Unit] =
-    deleteDirectory(path) >>= {
-      case true  => ZIO.unit
-      case false => ZIO.die(new IOException("Could not delete path recursively"))
+        deleteRecursively(path.toFile)
+      }
     }
+
+  private def deleteDirectoryE(path: Path): URIO[Any, Unit] =
+    deleteDirectory(path).orDie
 
   def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManaged(deleteDirectoryE)
 }

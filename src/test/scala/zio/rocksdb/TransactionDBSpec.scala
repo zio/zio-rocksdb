@@ -1,15 +1,14 @@
 package zio.rocksdb
 
-import java.nio.charset.StandardCharsets.UTF_8
-
 import org.{ rocksdb => jrocks }
 import zio.duration._
-import zio.rocksdb.internal.internal.ManagedPath
+import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ RIO, ZIO }
+import zio.{ BuildFrom, RIO, ZIO }
 
+import java.nio.charset.StandardCharsets.UTF_8
 import scala.language.postfixOps
 
 object TransactionDBSpec extends DefaultRunnableSpec {
@@ -85,8 +84,11 @@ object TransactionDBSpec extends DefaultRunnableSpec {
 
     rocksSuite.provideCustomLayerShared(database)
   }
-  private def bytesToInt(bytes: Array[Byte]): Int                                = new String(bytes, UTF_8).toInt
-  private def concurrent[R, E, A](n: Int)(zio: ZIO[R, E, A]): ZIO[R, E, List[A]] = ZIO.foreachPar(0 until n)(_ => zio)
+  private def bytesToInt(bytes: Array[Byte]): Int = new String(bytes, UTF_8).toInt
+  private def concurrent[R, E, A](
+    n: Int
+  )(zio: ZIO[R, E, A])(implicit bf: BuildFrom[List[Int], A, List[A]]): ZIO[R, E, List[A]] =
+    ZIO.foreachPar((0 until n).toList)(_ => zio)
 
   private val database = (for {
     dir <- ManagedPath()

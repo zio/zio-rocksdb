@@ -3,7 +3,7 @@ package zio.rocksdb
 import java.nio.charset.StandardCharsets.UTF_8
 import org.{ rocksdb => jrocks }
 import zio.RIO
-import zio.rocksdb.internal.internal.ManagedPath
+import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test._
 
