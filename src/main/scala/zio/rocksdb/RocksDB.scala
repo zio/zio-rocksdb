@@ -76,6 +76,8 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
         .bracket(Task(db.newIterator()))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
+    def getIterator: Task[RocksIterator] = Task(db.newIterator())
+
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
