@@ -1,4 +1,4 @@
-val mainScala = "2.12.12"
+val mainScala = "2.13.3"
 val allScala  = Seq(mainScala, "2.13.3")
 
 inThisBuild(
@@ -31,6 +31,7 @@ inThisBuild(
 
 name := "zio-rocksdb"
 scalafmtOnCompile := true
+version      := "0.1-SNAPSHOT"
 
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
