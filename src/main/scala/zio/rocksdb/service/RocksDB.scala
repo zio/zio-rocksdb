@@ -1,5 +1,6 @@
 package zio.rocksdb.service
 
+import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
 import zio.Task
 import zio.stream.Stream
@@ -79,4 +80,34 @@ trait RocksDB {
    * Writes a key to a specific ColumnFamily in the database.
    */
   def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
+
+  /**
+   * Creates a new ColumnFamily from ColumnFamilyDescriptor
+   */
+  def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle]
+
+  /**
+   * Creates ColumnFamilies from a list of ColumnFamilyDescriptors
+   */
+  def createColumnFamilies(
+    columnFamilyDescriptors: List[ColumnFamilyDescriptor]
+  ): Task[List[ColumnFamilyHandle]]
+
+  /**
+   * Creates ColumnFamilies from a list of ColumnFamilyNames and ColumnFamilyOptions
+   */
+  def createColumnFamilies(
+    columnFamilyOptions: ColumnFamilyOptions,
+    columnFamilyNames: List[Array[Byte]]
+  ): Task[List[ColumnFamilyHandle]]
+
+  /**
+   * Deletes a ColumnFamily
+   */
+  def dropColumnFamily(columnFamilyHandle: ColumnFamilyHandle): Task[Unit]
+
+  /**
+   * Deletes ColumnFamilies given a list of ColumnFamilyHandles
+   */
+  def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
 }
