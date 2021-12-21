@@ -1,7 +1,8 @@
 package zio.rocksdb
 
-import java.{ util => ju }
+import org.rocksdb.RocksIterator
 
+import java.{ util => ju }
 import org.{ rocksdb => jrocks }
 import zio._
 import zio.stream.{ Stream, ZStream }
@@ -65,7 +66,9 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
       ZStream
-        .bracket(Task(db.newIterators(cfHandles.asJava)))(its => UIO.foreach(its.asScala)(it => UIO(it.close())))
+        .bracket(Task(db.newIterators(cfHandles.asJava)))(
+          its => UIO.foreach(its.toArray)(it => UIO(it.asInstanceOf[RocksIterator].close()))
+        )
         .flatMap { its =>
           ZStream.fromIterable {
             cfHandles.zip(its.asScala.toList.map(drainIterator))
@@ -114,18 +117,18 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
     options: jrocks.DBOptions,
     path: String,
     cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-  ): ZLayer.NoDeps[Throwable, RocksDB] =
+  ): ZLayer[Any, Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(options, path, cfDescriptors))
 
   /**
    * Opens the default ColumnFamily for the database at the specified path.
    */
-  def live(path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+  def live(path: String): ZLayer[Any, Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(path))
 
   /**
    * Opens the default ColumnFamily for the database at the specified path.
    */
-  def live(options: jrocks.Options, path: String): ZLayer.NoDeps[Throwable, RocksDB] =
+  def live(options: jrocks.Options, path: String): ZLayer[Any, Throwable, RocksDB] =
     ZLayer.fromManaged(Live.open(options, path))
 }

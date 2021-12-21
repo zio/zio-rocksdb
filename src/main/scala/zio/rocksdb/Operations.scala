@@ -2,9 +2,9 @@ package zio.rocksdb
 
 import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
-import zio.{ Has, RIO, Tagged }
+import zio.{ Has, RIO, Tag }
 
-abstract class Operations[R <: Has[S], S <: service.RocksDB](implicit tagged: Tagged[S]) {
+abstract class Operations[R <: Has[S], S <: service.RocksDB](implicit tagged: Tag[S]) {
   private val db: RIO[R, S]                                                       = RIO.access[R](_.get)
   def delete(key: Array[Byte]): RIO[R, Unit]                                      = db >>= (_.delete(key))
   def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): RIO[R, Unit] = db >>= (_.delete(cfHandle, key))
