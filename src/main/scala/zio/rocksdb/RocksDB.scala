@@ -4,6 +4,7 @@ import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOpt
 import org.{ rocksdb => jrocks }
 import zio._
 import zio.stream.{ Stream, ZStream }
+
 import scala.jdk.CollectionConverters._
 
 object RocksDB extends Operations[RocksDB, service.RocksDB] {
