@@ -88,11 +88,29 @@ object Transaction {
   ): RIO[Transaction, Option[Array[Byte]]] =
     RIO.accessM(_.get.getForUpdate(readOptions, key, exclusive))
 
+  def getForUpdate(
+    readOptions: jrocks.ReadOptions,
+    cf: ColumnFamilyHandle,
+    key: Array[Byte],
+    exclusive: Boolean
+  ): RIO[Transaction, Option[Array[Byte]]] =
+    RIO.accessM(_.get.getForUpdate(readOptions, cf, key, exclusive))
+
   def getForUpdate(key: Array[Byte], exclusive: Boolean): RIO[Transaction, Option[Array[Byte]]] =
     RIO.accessM(_.get.getForUpdate(key, exclusive))
 
+  def getForUpdate(
+    cf: ColumnFamilyHandle,
+    key: Array[Byte],
+    exclusive: Boolean
+  ): RIO[Transaction, Option[Array[Byte]]] =
+    RIO.accessM(_.get.getForUpdate(cf, key, exclusive))
+
   def put(key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
     RIO.accessM(_.get.put(key, value))
+
+  def put(cf: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
+    RIO.accessM(_.get.put(cf, key, value))
 
   def delete(key: Array[Byte]): RIO[Transaction, Unit] =
     RIO.accessM(_.get.delete(key))
