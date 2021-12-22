@@ -27,7 +27,7 @@ trait Transaction {
   def getForUpdate(key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]] =
     getForUpdate(new jrocks.ReadOptions(), key, exclusive)
 
-  /*
+  /**
    * Retrieve a key that will be updated using this transaction.
    */
   def getForUpdate(
@@ -35,12 +35,12 @@ trait Transaction {
     cf: ColumnFamilyHandle,
     key: Array[Byte],
     exclusive: Boolean
-  ): Task[Array[Byte]]
+  ): Task[Option[Array[Byte]]]
 
-  /*
+  /**
    * Retrieve a key that will be updated using this transaction.
    */
-  def getForUpdate(cf: ColumnFamilyHandle, key: Array[Byte], exclusive: Boolean): Task[Array[Byte]] =
+  def getForUpdate(cf: ColumnFamilyHandle, key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]] =
     getForUpdate(new jrocks.ReadOptions(), cf, key, exclusive)
 
   /**

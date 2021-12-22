@@ -49,8 +49,8 @@ object Transaction {
       cf: ColumnFamilyHandle,
       key: Array[Byte],
       exclusive: Boolean
-    ): Task[Array[Byte]] = taskWithPermit {
-      transaction.getForUpdate(readOptions, cf, key, exclusive)
+    ): Task[Option[Array[Byte]]] = taskWithPermit {
+      Option(transaction.getForUpdate(readOptions, cf, key, exclusive))
     }
 
     override def put(cf: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] = taskWithPermit {

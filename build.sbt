@@ -31,7 +31,7 @@ inThisBuild(
 
 name := "zio-rocksdb"
 scalafmtOnCompile := true
-
+version := "0.2-SNAPSHOT"
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
