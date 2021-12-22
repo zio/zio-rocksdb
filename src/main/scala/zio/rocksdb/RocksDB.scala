@@ -1,8 +1,6 @@
 package zio.rocksdb
 
-import org.rocksdb.RocksIterator
-
-import java.{ util => ju }
+import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions, RocksIterator }
 import org.{ rocksdb => jrocks }
 import zio._
 import zio.stream.{ Stream, ZStream }
@@ -11,11 +9,32 @@ import scala.jdk.CollectionConverters._
 
 object RocksDB extends Operations[RocksDB, service.RocksDB] {
   class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends service.RocksDB {
+
+    def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle] =
+      Task(db.createColumnFamily(columnFamilyDescriptor))
+
+    def createColumnFamilies(
+      columnFamilyDescriptors: List[ColumnFamilyDescriptor]
+    ): Task[List[ColumnFamilyHandle]] =
+      Task(db.createColumnFamilies(columnFamilyDescriptors.asJava).asScala.toList)
+
+    def createColumnFamilies(
+      columnFamilyOptions: ColumnFamilyOptions,
+      columnFamilyNames: List[Array[Byte]]
+    ): Task[List[ColumnFamilyHandle]] =
+      Task(db.createColumnFamilies(columnFamilyOptions, columnFamilyNames.asJava).asScala.toList)
+
     def delete(key: Array[Byte]): Task[Unit] =
       Task(db.delete(key))
 
     def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit] =
       Task(db.delete(cfHandle, key))
+
+    def dropColumnFamily(columnFamilyHandle: ColumnFamilyHandle): Task[Unit] =
+      Task(db.dropColumnFamily(columnFamilyHandle))
+
+    def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit] =
+      Task(db.dropColumnFamilies(columnFamilyHandles.asJava))
 
     def get(key: Array[Byte]): Task[Option[Array[Byte]]] =
       Task(Option(db.get(key)))
@@ -57,6 +76,8 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
         .bracket(Task(db.newIterator()))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
+    def getIterator: Task[RocksIterator] = Task(db.newIterator())
+
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
@@ -83,6 +104,7 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
   }
 
   object Live {
+
     def listColumnFamilies(options: jrocks.Options, path: String): Task[List[Array[Byte]]] =
       Task(jrocks.RocksDB.listColumnFamilies(options, path).asScala.toList)
 
@@ -91,7 +113,7 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       path: String,
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
     ): Managed[Throwable, service.RocksDB] = {
-      val handles = new ju.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
+      val handles = new java.util.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
       val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
       make(db, handles.asScala.toList)
