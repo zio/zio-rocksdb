@@ -57,11 +57,11 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       }
 
     private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-        ZStream.fromEffect(Task(it.isValid)).flatMap { valid =>
+      ZStream.fromZIO(Task(it.seekToFirst())).drain ++
+        ZStream.fromZIO(Task(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
-            ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.repeatEffectOption {
+            ZStream.fromZIO(Task(it.key() -> it.value())) ++ ZStream.repeatZIOOption {
               Task {
                 it.next()
 
@@ -73,21 +73,21 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
 
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator()))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator()))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def getIterator: Task[RocksIterator] = Task(db.newIterator())
 
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
       ZStream
-        .bracket(Task(db.newIterators(cfHandles.asJava)))(
+        .acquireReleaseWith(Task(db.newIterators(cfHandles.asJava)))(
           its => UIO.foreach(its.toArray)(it => UIO(it.asInstanceOf[RocksIterator].close()))
         )
         .flatMap { its =>
@@ -129,7 +129,7 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       db: Task[jrocks.RocksDB],
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Managed[Throwable, service.RocksDB] =
-      db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
+      db.toManagedWith(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
   }
 
   /**

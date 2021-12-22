@@ -6,11 +6,12 @@ import zio.RIO
 import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test._
+import zio.test.ZIOSpecDefault
 
-object RocksDBSpec extends DefaultRunnableSpec {
+object RocksDBSpec extends ZIOSpecDefault {
   override def spec = {
     val rocksSuite = suite("RocksDB")(
-      testM("get/put") {
+      test("get/put") {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
 
@@ -19,7 +20,7 @@ object RocksDBSpec extends DefaultRunnableSpec {
           result <- RocksDB.get(key)
         } yield assert(result)(isSome(equalTo(value)))
       },
-      testM("delete") {
+      test("delete") {
         val key   = "key".getBytes(UTF_8)
         val value = "value".getBytes(UTF_8)
 
@@ -30,11 +31,11 @@ object RocksDBSpec extends DefaultRunnableSpec {
           after  <- RocksDB.get(key)
         } yield assert(before)(isSome(equalTo(value))) && assert(after)(isNone)
       },
-      testM("newIterator") {
+      test("newIterator") {
         val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
         for {
-          _          <- RIO.foreach_(data) { case (k, v) => RocksDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+          _          <- RIO.foreachDiscard(data) { case (k, v) => RocksDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
           results    <- RocksDB.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))

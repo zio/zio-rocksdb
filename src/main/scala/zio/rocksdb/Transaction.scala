@@ -66,7 +66,7 @@ object Transaction {
       (for {
         semaphore   <- Semaphore.make(1)
         transaction <- Task(new Live(semaphore, db.beginTransaction(writeOptions)))
-      } yield transaction).toManaged(_.close)
+      } yield transaction).toManagedWith(_.close)
   }
 
   def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Throwable, Transaction] =
@@ -76,17 +76,17 @@ object Transaction {
     live(db)
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.get(readOptions, key))
+    RIO.serviceWithZIO(_.get(readOptions, key))
 
   def get(key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.get(key))
+    RIO.serviceWithZIO(_.get(key))
 
   def getForUpdate(
     readOptions: jrocks.ReadOptions,
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(readOptions, key, exclusive))
+    RIO.serviceWithZIO(_.getForUpdate(readOptions, key, exclusive))
 
   def getForUpdate(
     readOptions: jrocks.ReadOptions,
@@ -94,34 +94,34 @@ object Transaction {
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(readOptions, cf, key, exclusive))
+    RIO.serviceWithZIO(_.getForUpdate(readOptions, cf, key, exclusive))
 
   def getForUpdate(key: Array[Byte], exclusive: Boolean): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(key, exclusive))
+    RIO.serviceWithZIO(_.getForUpdate(key, exclusive))
 
   def getForUpdate(
     cf: ColumnFamilyHandle,
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.accessM(_.get.getForUpdate(cf, key, exclusive))
+    RIO.serviceWithZIO(_.getForUpdate(cf, key, exclusive))
 
   def put(key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.accessM(_.get.put(key, value))
+    RIO.serviceWithZIO(_.put(key, value))
 
   def put(cf: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.accessM(_.get.put(cf, key, value))
+    RIO.serviceWithZIO(_.put(cf, key, value))
 
   def delete(key: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.accessM(_.get.delete(key))
+    RIO.serviceWithZIO(_.delete(key))
 
   def commit: RIO[Transaction, Unit] =
-    RIO.accessM(_.get.commit)
+    RIO.serviceWithZIO(_.commit)
 
   def close: URIO[Transaction, Unit] =
-    RIO.accessM(_.get.close)
+    RIO.serviceWithZIO(_.close)
 
   def rollback: RIO[Transaction, Unit] =
-    RIO.accessM(_.get.rollback)
+    RIO.serviceWithZIO(_.rollback)
 
 }

@@ -36,7 +36,7 @@ enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
 
-val zioVersion = "1.0.12"
+val zioVersion = "2.0.0-RC1"
 
 libraryDependencies ++= Seq(
   "dev.zio"                %% "zio-streams"             % zioVersion,

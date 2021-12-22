@@ -2,7 +2,7 @@ package zio
 
 package object rocksdb {
   type Bytes         = Chunk[Byte]
-  type RocksDB       = Has[service.RocksDB]
-  type TransactionDB = Has[service.TransactionDB]
-  type Transaction   = Has[service.Transaction]
+  type RocksDB       = service.RocksDB
+  type TransactionDB = service.TransactionDB
+  type Transaction   = service.Transaction
 }
