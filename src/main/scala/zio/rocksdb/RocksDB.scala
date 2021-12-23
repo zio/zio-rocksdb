@@ -114,7 +114,7 @@ trait RocksDB {
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
 }
 
-object RocksDB extends Operations[RocksDB, RocksDB] {
+object RocksDB extends Operations[RocksDB] {
   class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB {
 
     def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle] =

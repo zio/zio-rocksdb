@@ -5,8 +5,8 @@ import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
 import zio.{ IsNotIntersection, RIO, Tag, ZIO }
 
-abstract class Operations[R <: S, S <: RocksDB](implicit tagged: Tag[S], ev: IsNotIntersection[S]) {
-  private val db: RIO[R, S] = RIO.service[S]
+abstract class Operations[R <: RocksDB](implicit tagged: Tag[R], ev: IsNotIntersection[R]) {
+  private val db: RIO[R, R] = RIO.service[R]
 
   def delete(key: Array[Byte]): RIO[R, Unit] = db.flatMap(_.delete(key))
 

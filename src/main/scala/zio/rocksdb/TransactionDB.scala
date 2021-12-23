@@ -44,7 +44,7 @@ trait TransactionDB extends RocksDB {
   ): ZIO[Any, E, A] = atomically[E, A](new jrocks.WriteOptions())(zio)
 }
 
-object TransactionDB extends Operations[TransactionDB, TransactionDB] {
+object TransactionDB extends Operations[TransactionDB] {
   private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, Transaction] =
       Transaction.Live.begin(db, writeOptions)

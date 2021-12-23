@@ -94,9 +94,10 @@ object Transaction {
       Option(transaction.getForUpdate(readOptions, key, exclusive))
     }
 
-    override def put(key: Array[Byte], value: Array[Byte]): Task[Unit] = taskWithPermit {
-      transaction.put(key, value)
-    }
+    override def put(key: Array[Byte], value: Array[Byte]): Task[Unit] =
+      semaphore.withPermit {
+        ZIO.debug("acquired permit") *> ZIO.succeed(transaction.put(key, value)) <* ZIO.debug("releasing permit")
+      }
 
     override def delete(key: Array[Byte]): Task[Unit] = taskWithPermit {
       transaction.delete(key)
