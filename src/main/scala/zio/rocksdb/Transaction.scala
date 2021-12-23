@@ -4,9 +4,79 @@ import org.rocksdb.{ ColumnFamilyHandle, ReadOptions }
 import org.{ rocksdb => jrocks }
 import zio._
 
+trait Transaction {
+
+  /**
+   * Retrieve a key using this transaction.
+   */
+  def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): Task[Option[Array[Byte]]]
+
+  /**
+   * Retrieve a key using this transaction.
+   */
+  def get(key: Array[Byte]): Task[Option[Array[Byte]]] = get(new jrocks.ReadOptions(), key)
+
+  /**
+   * Retrieve a key that will be updated using this transaction.
+   */
+  def getForUpdate(readOptions: jrocks.ReadOptions, key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]]
+
+  /**
+   * Retrieve a key that will be updated using this transaction.
+   */
+  def getForUpdate(key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]] =
+    getForUpdate(new jrocks.ReadOptions(), key, exclusive)
+
+  /**
+   * Retrieve a key that will be updated using this transaction.
+   */
+  def getForUpdate(
+    readOptions: jrocks.ReadOptions,
+    cf: ColumnFamilyHandle,
+    key: Array[Byte],
+    exclusive: Boolean
+  ): Task[Option[Array[Byte]]]
+
+  /**
+   * Retrieve a key that will be updated using this transaction.
+   */
+  def getForUpdate(cf: ColumnFamilyHandle, key: Array[Byte], exclusive: Boolean): Task[Option[Array[Byte]]] =
+    getForUpdate(new jrocks.ReadOptions(), cf, key, exclusive)
+
+  /**
+   * Writes a key using this transaction.
+   */
+  def put(key: Array[Byte], value: Array[Byte]): Task[Unit]
+
+  /*
+   * Writes a key using this transaction.
+   */
+  def put(cf: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
+
+  /**
+   * Deletes a key using this transaction.
+   */
+  def delete(key: Array[Byte]): Task[Unit]
+
+  /**
+   * Commits all the changes using this transaction.
+   */
+  def commit: Task[Unit]
+
+  /**
+   * Closes the transaction.
+   */
+  def close: UIO[Unit]
+
+  /**
+   * Rollbacks all the changes made through this transaction.
+   */
+  def rollback: Task[Unit]
+}
+
 object Transaction {
 
-  private final class Live private (semaphore: Semaphore, transaction: jrocks.Transaction) extends service.Transaction {
+  private final class Live private (semaphore: Semaphore, transaction: jrocks.Transaction) extends Transaction {
 
     def taskWithPermit[A](task: => A): Task[A] = semaphore.withPermit(Task(task))
 
@@ -62,7 +132,7 @@ object Transaction {
     def begin(
       db: jrocks.TransactionDB,
       writeOptions: jrocks.WriteOptions
-    ): ZManaged[Any, Throwable, service.Transaction] =
+    ): ZManaged[Any, Throwable, Transaction] =
       (for {
         semaphore   <- Semaphore.make(1)
         transaction <- Task(new Live(semaphore, db.beginTransaction(writeOptions)))
