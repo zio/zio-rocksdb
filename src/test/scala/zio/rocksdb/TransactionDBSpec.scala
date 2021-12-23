@@ -9,7 +9,6 @@ import zio.test._
 import zio.{ BuildFrom, RIO, ZIO }
 
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.language.postfixOps
 import zio._
 import zio.test.{ Gen, ZIOSpecDefault }
 
@@ -82,7 +81,7 @@ object TransactionDBSpec extends ZIOSpecDefault {
           } yield assertCompletes
         }
       } @@ nonFlaky(10)
-    ) @@ timeout(5 second)
+    ) @@ timeout(60.seconds)
 
     rocksSuite.provideCustomLayer(database)
   }
