@@ -58,4 +58,6 @@ abstract class Operations[R <: Has[S], S <: service.RocksDB](implicit tagged: Ta
 
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): ZIO[R, Throwable, Unit] =
     db >>= (_.dropColumnFamilies(columnFamilyHandles))
+
+  def ownedColumnFamilyHandles(): ZIO[R, Throwable, List[ColumnFamilyHandle]] = db >>= (_.ownedColumnFamilyHandles())
 }

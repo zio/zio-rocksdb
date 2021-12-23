@@ -8,21 +8,35 @@ import zio.stream.{ Stream, ZStream }
 import scala.jdk.CollectionConverters._
 
 object RocksDB extends Operations[RocksDB, service.RocksDB] {
-  class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends service.RocksDB {
+
+  class Live protected (
+    db: jrocks.RocksDB,
+    cfHandles: List[jrocks.ColumnFamilyHandle],
+    allColumnFamilyHandles: Ref[List[ColumnFamilyHandle]]
+  ) extends service.RocksDB {
 
     def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle] =
-      Task(db.createColumnFamily(columnFamilyDescriptor))
+      for {
+        cfHandle <- Task.succeed(db.createColumnFamily(columnFamilyDescriptor))
+        _        <- allColumnFamilyHandles.update(l => cfHandle :: l)
+      } yield cfHandle
 
     def createColumnFamilies(
       columnFamilyDescriptors: List[ColumnFamilyDescriptor]
     ): Task[List[ColumnFamilyHandle]] =
-      Task(db.createColumnFamilies(columnFamilyDescriptors.asJava).asScala.toList)
+      for {
+        cfHandles <- Task(db.createColumnFamilies(columnFamilyDescriptors.asJava).asScala.toList)
+        _         <- allColumnFamilyHandles.update(l => cfHandles ++ l)
+      } yield cfHandles
 
     def createColumnFamilies(
       columnFamilyOptions: ColumnFamilyOptions,
       columnFamilyNames: List[Array[Byte]]
     ): Task[List[ColumnFamilyHandle]] =
-      Task(db.createColumnFamilies(columnFamilyOptions, columnFamilyNames.asJava).asScala.toList)
+      for {
+        cfHandles <- Task(db.createColumnFamilies(columnFamilyOptions, columnFamilyNames.asJava).asScala.toList)
+        _         <- allColumnFamilyHandles.update(l => cfHandles ++ l)
+      } yield cfHandles
 
     def delete(key: Array[Byte]): Task[Unit] =
       Task(db.delete(key))
@@ -101,6 +115,11 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
 
     def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] =
       Task(db.put(cfHandle, key, value))
+
+    /**
+     * Returns a list of all open ColumnFamilyHandles
+     */
+    override def ownedColumnFamilyHandles(): Task[List[ColumnFamilyHandle]] = allColumnFamilyHandles.get
   }
 
   object Live {
@@ -129,7 +148,10 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       db: Task[jrocks.RocksDB],
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Managed[Throwable, service.RocksDB] =
-      db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
+      Ref
+        .make(cfHandles)
+        .toManaged_
+        .flatMap(colFam => db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles, colFam)))
   }
 
   /**

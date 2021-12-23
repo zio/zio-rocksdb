@@ -110,4 +110,9 @@ trait RocksDB {
    * Deletes ColumnFamilies given a list of ColumnFamilyHandles
    */
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  /**
+   * Returns a list of all open ColumnFamilyHandles
+   */
+  def ownedColumnFamilyHandles(): Task[List[ColumnFamilyHandle]]
 }

@@ -4,7 +4,9 @@ import org.{ rocksdb => jrocks }
 import zio._
 
 object TransactionDB extends Operations[TransactionDB, service.TransactionDB] {
-  private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with service.TransactionDB {
+  private final class Live private (db: jrocks.TransactionDB)
+      extends RocksDB.Live(db, Nil, allColumnFamilyHandles = Ref.unsafeMake(Nil))
+      with service.TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, service.Transaction] =
       Transaction.Live.begin(db, writeOptions)
 

@@ -1,11 +1,13 @@
 package zio.rocksdb
 
-import java.nio.charset.StandardCharsets.UTF_8
+import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
-import zio.RIO
 import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test._
+import zio.{ RIO, ZIO }
+
+import java.nio.charset.StandardCharsets.UTF_8
 
 object RocksDBSpec extends DefaultRunnableSpec {
   override def spec = {
@@ -38,9 +40,55 @@ object RocksDBSpec extends DefaultRunnableSpec {
           results    <- RocksDB.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))
+      },
+      testM("ownedColumnFamilyHandles") {
+        for {
+          cfHandles <- RocksDB.ownedColumnFamilyHandles()
+        } yield assert(cfHandles)(equalTo(Nil))
+      },
+      testM("ownedColumnFamilyHandles- concurrent creation") {
+        val zio: ZIO[RocksDB, Throwable, Int] = ZIO
+          .foreachPar((0 until 100).toList)(i => {
+            val cfDescriptor = new ColumnFamilyDescriptor(s"TestColFam${i.toString}".getBytes())
+            RocksDB.createColumnFamily(cfDescriptor)
+          })
+          .map(_.size)
+        assertM(zio)(equalTo(100))
+      },
+      testM("ownedColumnFamilyHandles - check actual values") {
+        val cfDescriptor = new ColumnFamilyDescriptor("TestColFam1".getBytes())
+        for {
+          _             <- RocksDB.createColumnFamily(cfDescriptor)
+          newHandleList <- RocksDB.ownedColumnFamilyHandles()
+        } yield assert(newHandleList.head.getName)(equalTo("TestColFam1".getBytes()))
+      },
+      testM("createColumnHandle") {
+        val cfDescriptor = new ColumnFamilyDescriptor("ColFam1".getBytes())
+        for {
+          newHandleList <- RocksDB.createColumnFamily(cfDescriptor)
+        } yield assert(newHandleList.getName)(equalTo("ColFam1".getBytes()))
+      },
+      testM("createColumnFamilyHandles") {
+        val cfDescriptor = List(
+          new ColumnFamilyDescriptor("TestColFam1".getBytes()),
+          new ColumnFamilyDescriptor("TestColFam2".getBytes()),
+          new ColumnFamilyDescriptor("ColFam3".getBytes())
+        )
+        for {
+          newHandleList <- RocksDB.createColumnFamilies(cfDescriptor)
+        } yield assert(newHandleList.head.getName)(equalTo("TestColFam1".getBytes()))
+      },
+      testM("createColumnFamilyHandles") {
+        val cfNames = List(
+          "TestColFam1".getBytes(),
+          "TestColFam2".getBytes(),
+          "TestColFam3".getBytes()
+        )
+        for {
+          newHandleList <- RocksDB.createColumnFamilies(new ColumnFamilyOptions(), cfNames)
+        } yield assert(newHandleList(1).getName)(equalTo("TestColFam2".getBytes()))
       }
     )
-
     rocksSuite.provideCustomLayer(database)
   }
 
@@ -51,5 +99,4 @@ object RocksDBSpec extends DefaultRunnableSpec {
       RocksDB.Live.open(opts, dir.toAbsolutePath.toString)
     }
   } yield db).toLayer.mapError(TestFailure.die)
-
 }
