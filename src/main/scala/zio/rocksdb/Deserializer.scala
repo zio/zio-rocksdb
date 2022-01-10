@@ -1,10 +1,8 @@
 package zio.rocksdb
 
-import zio.clock.Clock
-
 import java.{ lang => jlang }
 import java.nio.ByteBuffer
-import zio.{ Chunk, Ref, Schedule, UIO, ZIO }
+import zio.{ Chunk, Clock, Ref, Schedule, UIO, ZIO }
 
 trait Deserializer[-R, +A] { self =>
   def decode(bytes: Bytes): ZIO[R, DeserializeError, Result[A]]
@@ -491,7 +489,7 @@ private[rocksdb] trait DeserializerUtilityFunctions {
         if (head.size < n)
           ZIO.fail(DeserializeError.TooShort(bytes.length, n))
         else
-          ZIO.effectTotal {
+          ZIO.succeed {
             val buf = ByteBuffer.wrap(head.toArray)
             Result(f(buf), tail)
           }

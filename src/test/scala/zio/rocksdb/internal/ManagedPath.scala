@@ -27,5 +27,5 @@ object ManagedPath {
   private def deleteDirectoryE(path: Path): URIO[Any, Unit] =
     deleteDirectory(path).orDie
 
-  def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManaged(deleteDirectoryE)
+  def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManagedWith(deleteDirectoryE)
 }

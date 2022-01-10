@@ -7,8 +7,115 @@ import zio.stream.{ Stream, ZStream }
 
 import scala.jdk.CollectionConverters._
 
-object RocksDB extends Operations[RocksDB, service.RocksDB] {
-  class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends service.RocksDB {
+trait RocksDB {
+
+  /**
+   * Delete a key from the default ColumnFamily in the database.
+   */
+  def delete(key: Array[Byte]): Task[Unit]
+
+  /**
+   * Delete a key from a specific ColumnFamily in the database.
+   */
+  def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
+
+  /**
+   * Retrieve a key from the default ColumnFamily in the database.
+   */
+  def get(key: Array[Byte]): Task[Option[Array[Byte]]]
+
+  /**
+   * Retrieve a key from a specific ColumnFamily in the database.
+   */
+  def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]]
+
+  /**
+   * Retrieves the list of ColumnFamily handles the database was opened with.
+   *
+   * Caveats:
+   * - This list will only be populated if the database was opened with a specific list of
+   *   column families.
+   * - The list will not be updated if column families are added/removed while the database
+   *   is open.
+   */
+  def initialHandles: Task[List[jrocks.ColumnFamilyHandle]]
+
+  /**
+   * Retrieve multiple keys from the default ColumnFamily in the database. The resulting list
+   * corresponds (positionally) to the list of keys passed to the function.
+   */
+  def multiGetAsList(keys: List[Array[Byte]]): Task[List[Option[Array[Byte]]]]
+
+  /**
+   * Retrieve multiple keys from specific ColumnFamilies in the database. The resulting list
+   * corresponds (positionally) to the list of keys passed to the function.
+   */
+  def multiGetAsList(
+    handles: List[jrocks.ColumnFamilyHandle],
+    keys: List[Array[Byte]]
+  ): Task[List[Option[Array[Byte]]]]
+
+  /**
+   * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
+   */
+  def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])]
+
+  /**
+   * Scans a specific ColumnFamily in the database and emits the results as a `ZStream`.
+   */
+  def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])]
+
+  /**
+   * Scans multiple ColumnFamilies in the database and emits the results in multiple streams,
+   * whereas the streams themselves are also emitted in a `ZStream`.
+   */
+  def newIterators(
+    cfHandles: List[jrocks.ColumnFamilyHandle]
+  ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])]
+
+  /**
+   * Writes a key to the default ColumnFamily in the database.
+   */
+  def put(key: Array[Byte], value: Array[Byte]): Task[Unit]
+
+  /**
+   * Writes a key to a specific ColumnFamily in the database.
+   */
+  def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
+
+  /**
+   * Creates a new ColumnFamily from ColumnFamilyDescriptor
+   */
+  def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle]
+
+  /**
+   * Creates ColumnFamilies from a list of ColumnFamilyDescriptors
+   */
+  def createColumnFamilies(
+    columnFamilyDescriptors: List[ColumnFamilyDescriptor]
+  ): Task[List[ColumnFamilyHandle]]
+
+  /**
+   * Creates ColumnFamilies from a list of ColumnFamilyNames and ColumnFamilyOptions
+   */
+  def createColumnFamilies(
+    columnFamilyOptions: ColumnFamilyOptions,
+    columnFamilyNames: List[Array[Byte]]
+  ): Task[List[ColumnFamilyHandle]]
+
+  /**
+   * Deletes a ColumnFamily
+   */
+  def dropColumnFamily(columnFamilyHandle: ColumnFamilyHandle): Task[Unit]
+
+  /**
+   * Deletes ColumnFamilies given a list of ColumnFamilyHandles
+   */
+  def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+}
+
+object RocksDB extends Operations[RocksDB] {
+  class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB {
 
     def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle] =
       Task(db.createColumnFamily(columnFamilyDescriptor))
@@ -57,11 +164,11 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       }
 
     private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromEffect(Task(it.seekToFirst())).drain ++
-        ZStream.fromEffect(Task(it.isValid)).flatMap { valid =>
+      ZStream.fromZIO(Task(it.seekToFirst())).drain ++
+        ZStream.fromZIO(Task(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
-            ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.repeatEffectOption {
+            ZStream.fromZIO(Task(it.key() -> it.value())) ++ ZStream.repeatZIOOption {
               Task {
                 it.next()
 
@@ -73,21 +180,21 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
 
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator()))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator()))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def getIterator: Task[RocksIterator] = Task(db.newIterator())
 
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
-        .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
+        .acquireReleaseWith(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
         .flatMap(drainIterator)
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
       ZStream
-        .bracket(Task(db.newIterators(cfHandles.asJava)))(
+        .acquireReleaseWith(Task(db.newIterators(cfHandles.asJava)))(
           its => UIO.foreach(its.toArray)(it => UIO(it.asInstanceOf[RocksIterator].close()))
         )
         .flatMap { its =>
@@ -112,24 +219,24 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
       options: jrocks.DBOptions,
       path: String,
       cfDescriptors: List[jrocks.ColumnFamilyDescriptor]
-    ): Managed[Throwable, service.RocksDB] = {
+    ): Managed[Throwable, RocksDB] = {
       val handles = new java.util.ArrayList[jrocks.ColumnFamilyHandle](cfDescriptors.size)
       val db      = Task(jrocks.RocksDB.open(options, path, cfDescriptors.asJava, handles))
 
       make(db, handles.asScala.toList)
     }
 
-    def open(path: String): Managed[Throwable, service.RocksDB] =
+    def open(path: String): Managed[Throwable, RocksDB] =
       make(Task(jrocks.RocksDB.open(path)), Nil)
 
-    def open(options: jrocks.Options, path: String): Managed[Throwable, service.RocksDB] =
+    def open(options: jrocks.Options, path: String): Managed[Throwable, RocksDB] =
       make(Task(jrocks.RocksDB.open(options, path)), Nil)
 
     private def make(
       db: Task[jrocks.RocksDB],
       cfHandles: List[jrocks.ColumnFamilyHandle]
-    ): Managed[Throwable, service.RocksDB] =
-      db.toManaged(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
+    ): Managed[Throwable, RocksDB] =
+      db.toManagedWith(db => Task(db.closeE()).orDie).map(new Live(_, cfHandles))
   }
 
   /**

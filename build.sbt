@@ -9,9 +9,9 @@ inThisBuild(
     useCoursier := false,
     scalaVersion := mainScala,
     crossScalaVersions := allScala,
-    parallelExecution in Test := false,
-    fork in Test := true,
-    fork in run := true,
+    Test / parallelExecution := false,
+    Test / fork := true,
+    run / fork := true,
     pgpPublicRing := file("/tmp/public.asc"),
     pgpSecretRing := file("/tmp/secret.asc"),
     pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
@@ -36,14 +36,14 @@ enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
 
-val zioVersion = "1.0.12"
+val zioVersion = "2.0.0-RC1"
 
 libraryDependencies ++= Seq(
   "dev.zio"                %% "zio-streams"             % zioVersion,
-  "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.3",
+  "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0",
   "dev.zio"                %% "zio-test"                % zioVersion % "test",
   "dev.zio"                %% "zio-test-sbt"            % zioVersion % "test",
-  "org.rocksdb"            % "rocksdbjni"               % "6.4.6"
+  "org.rocksdb"            % "rocksdbjni"               % "6.27.3"
 )
 
 scalacOptions --= Seq("-Xlint:nullary-override")
