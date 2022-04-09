@@ -477,7 +477,7 @@ private[rocksdb] trait PrimitiveSerializers extends SerializerUtilityFunctions {
     byte.contramap(if (_) 1 else 0)
 
   val byte: Serializer[Any, Byte] =
-    Serializer[Any, Byte](b => UIO(Chunk.single(b)))
+    Serializer[Any, Byte](b => ZIO.succeed(Chunk.single(b)))
 
   val char: Serializer[Any, Char] =
     fromByteBuffer(jlang.Character.BYTES, _ putChar _)
@@ -502,7 +502,7 @@ private[rocksdb] trait SerializerUtilityFunctions {
   private[rocksdb] def fromByteBuffer[A](n: Int, mutate: (ByteBuffer, A) => Any): Serializer[Any, A] =
     new Serializer[Any, A] {
       def apply(a: A): UIO[Bytes] =
-        URIO {
+        ZIO.succeed {
           val buf: ByteBuffer = ByteBuffer.allocate(n)
           mutate(buf, a)
           Chunk.fromArray(buf.array)
@@ -514,7 +514,7 @@ private[rocksdb] trait SerializerUtilityFunctions {
   ): Serializer[Any, F[A]] =
     new Serializer[Any, F[A]] {
       def apply(fa: F[A]): UIO[Bytes] =
-        URIO {
+        ZIO.succeed {
           val s   = fa.size
           val l   = n * s
           val buf = ByteBuffer.allocate(l)

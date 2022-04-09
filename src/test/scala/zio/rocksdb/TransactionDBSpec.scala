@@ -91,13 +91,15 @@ object TransactionDBSpec extends ZIOSpecDefault {
   )(zio: ZIO[R, E, A])(implicit bf: BuildFrom[List[Int], A, List[A]]): ZIO[R, E, List[A]] =
     ZIO.foreachPar((0 until n).toList)(_ => zio)
 
-  private val database = (for {
-    dir <- ManagedPath()
-    db <- {
-      val opts = new jrocks.Options().setCreateIfMissing(true)
-      TransactionDB.Live.open(opts, dir.toAbsolutePath.toString)
-    }
-  } yield db).toLayer.mapError(TestFailure.die)
+  private val database = ZLayer.scoped {
+    for {
+      dir <- ManagedPath()
+      db <- {
+        val opts = new jrocks.Options().setCreateIfMissing(true)
+        TransactionDB.Live.open(opts, dir.toAbsolutePath.toString)
+      }
+    } yield db
+  }.mapError(TestFailure.die)
 
   private def byteArray = Gen.listOf(Gen.byte).map(_.toArray)
 }
