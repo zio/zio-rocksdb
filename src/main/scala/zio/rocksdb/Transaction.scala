@@ -1,6 +1,6 @@
 package zio.rocksdb
 
-import org.rocksdb.{ ColumnFamilyHandle, ReadOptions }
+import org.rocksdb.{ ColumnFamilyHandle, ReadOptions, WriteOptions }
 import org.{ rocksdb => jrocks }
 import zio._
 
@@ -78,9 +78,9 @@ object Transaction {
 
   private final class Live private (semaphore: Semaphore, transaction: jrocks.Transaction) extends Transaction {
 
-    def taskWithPermit[A](task: => A): Task[A] = semaphore.withPermit(Task(task))
+    def taskWithPermit[A](task: => A): Task[A] = semaphore.withPermit(ZIO.attempt(task))
 
-    def uioWithPermit[A](task: => A): UIO[A] = semaphore.withPermit(UIO(task))
+    def uioWithPermit[A](task: => A): UIO[A] = semaphore.withPermit(ZIO.succeed(task))
 
     override def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): Task[Option[Array[Byte]]] = taskWithPermit {
       Option(transaction.get(readOptions, key))
@@ -133,18 +133,20 @@ object Transaction {
     def begin(
       db: jrocks.TransactionDB,
       writeOptions: jrocks.WriteOptions
-    ): ZManaged[Any, Throwable, Transaction] =
-      (for {
+    ): ZIO[Scope, Throwable, Transaction] =
+      for {
         semaphore   <- Semaphore.make(1)
-        transaction <- Task(new Live(semaphore, db.beginTransaction(writeOptions)))
-      } yield transaction).toManagedWith(_.close)
+        transaction <- ZIO.acquireRelease(ZIO.attempt(new Live(semaphore, db.beginTransaction(writeOptions))))(_.close)
+      } yield transaction
   }
 
   def live(db: jrocks.TransactionDB, writeOptions: jrocks.WriteOptions): ZLayer[Any, Throwable, Transaction] =
-    Live.begin(db, writeOptions).toLayer
+    ZLayer.scoped {
+      Live.begin(db, writeOptions)
+    }
 
   def live(db: jrocks.TransactionDB): ZLayer[Any, Throwable, Transaction] =
-    live(db)
+    live(db, new WriteOptions())
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
     RIO.serviceWithZIO(_.get(readOptions, key))

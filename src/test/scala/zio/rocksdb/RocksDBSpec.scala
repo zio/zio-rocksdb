@@ -2,7 +2,7 @@ package zio.rocksdb
 
 import java.nio.charset.StandardCharsets.UTF_8
 import org.{ rocksdb => jrocks }
-import zio.RIO
+import zio.{ RIO, ZLayer }
 import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test._
@@ -45,12 +45,15 @@ object RocksDBSpec extends ZIOSpecDefault {
     rocksSuite.provideCustomLayer(database)
   }
 
-  private val database = (for {
-    dir <- ManagedPath()
-    db <- {
-      val opts = new jrocks.Options().setCreateIfMissing(true)
-      RocksDB.Live.open(opts, dir.toAbsolutePath.toString)
-    }
-  } yield db).toLayer.mapError(TestFailure.die)
+  private val database =
+    ZLayer.scoped {
+      for {
+        dir <- ManagedPath()
+        db <- {
+          val opts = new jrocks.Options().setCreateIfMissing(true)
+          RocksDB.Live.open(opts, dir.toAbsolutePath.toString)
+        }
+      } yield db
+    }.mapError(TestFailure.die)
 
 }

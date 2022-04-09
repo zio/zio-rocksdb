@@ -8,12 +8,12 @@ trait TransactionDB extends RocksDB {
   /**
    * Creates a managed instance of `service.Transaction` using the provided `WriteOptions`.
    */
-  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, Transaction]
+  def beginTransaction(writeOptions: jrocks.WriteOptions): ZIO[Scope, Throwable, Transaction]
 
   /**
    * Creates a managed instance of `service.Transaction`.
    */
-  def beginTransaction: ZManaged[Any, Throwable, Transaction] = beginTransaction(new jrocks.WriteOptions())
+  def beginTransaction: ZIO[Scope, Throwable, Transaction] = beginTransaction(new jrocks.WriteOptions())
 
   /**
    * Executes the provided zio program in a single transaction.
@@ -46,7 +46,7 @@ trait TransactionDB extends RocksDB {
 
 object TransactionDB extends Operations[TransactionDB] {
   private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with TransactionDB {
-    override def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[Any, Throwable, Transaction] =
+    override def beginTransaction(writeOptions: jrocks.WriteOptions): ZIO[Scope, Throwable, Transaction] =
       Transaction.Live.begin(db, writeOptions)
 
     override def atomically[R, E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
@@ -61,7 +61,7 @@ object TransactionDB extends Operations[TransactionDB] {
     ): IO[E, A] =
       (zio <* Transaction.commit).provideLayer(Transaction.live(db, writeOptions))
 
-    private def closeE: Task[Unit] = Task { db.closeE() }
+    private def closeE: Task[Unit] = ZIO.attempt { db.closeE() }
   }
 
   object Live {
@@ -69,13 +69,14 @@ object TransactionDB extends Operations[TransactionDB] {
       options: jrocks.Options,
       transactionDBOptions: jrocks.TransactionDBOptions,
       path: String
-    ): Managed[Throwable, TransactionDB] =
-      Task(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path)))
-        .toManagedWith(_.closeE.orDie)
+    ): ZIO[Scope, Throwable, TransactionDB] =
+      ZIO.acquireRelease(ZIO.attempt(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path))))(
+        _.closeE.orDie
+      )
 
-    def open(options: jrocks.Options, path: String): Managed[Throwable, TransactionDB] =
+    def open(options: jrocks.Options, path: String): ZIO[Scope, Throwable, TransactionDB] =
       open(options, new jrocks.TransactionDBOptions(), path)
-    def open(path: String): Managed[Throwable, TransactionDB] =
+    def open(path: String): ZIO[Scope, Throwable, TransactionDB] =
       open(new jrocks.Options(), path)
   }
 
@@ -83,18 +84,21 @@ object TransactionDB extends Operations[TransactionDB] {
     options: jrocks.Options,
     transactionDBOptions: jrocks.TransactionDBOptions,
     path: String
-  ): ZLayer[Any, Throwable, TransactionDB] = Live.open(options, transactionDBOptions, path).toLayer
+  ): ZLayer[Any, Throwable, TransactionDB] =
+    ZLayer.scoped {
+      Live.open(options, transactionDBOptions, path)
+    }
 
   def live(options: jrocks.Options, path: String): ZLayer[Any, Throwable, TransactionDB] =
     live(options, new jrocks.TransactionDBOptions(), path)
 
-  def beginTransaction(writeOptions: jrocks.WriteOptions): ZManaged[TransactionDB, Throwable, Transaction] =
+  def beginTransaction(writeOptions: jrocks.WriteOptions): ZIO[TransactionDB with Scope, Throwable, Transaction] =
     for {
-      db          <- ZManaged.service[TransactionDB]
+      db          <- ZIO.service[TransactionDB]
       transaction <- db.beginTransaction(writeOptions)
     } yield transaction
 
-  def beginTransaction(): ZManaged[TransactionDB, Throwable, Transaction] =
+  def beginTransaction(): ZIO[TransactionDB with Scope, Throwable, Transaction] =
     beginTransaction(new jrocks.WriteOptions())
 
   def atomically[R, E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction with R, E, A])(
