@@ -3,10 +3,10 @@ package zio.rocksdb
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
 import zio.stream.ZStream
-import zio.{ IsNotIntersection, RIO, Tag, ZIO }
+import zio.{ RIO, Tag, ZIO }
 
-abstract class Operations[R <: RocksDB](implicit tagged: Tag[R], ev: IsNotIntersection[R]) {
-  private val db: RIO[R, R] = RIO.service[R]
+abstract class Operations[R <: RocksDB](implicit tagged: Tag[R]) {
+  private val db: RIO[R, R] = ZIO.service[R]
 
   def delete(key: Array[Byte]): RIO[R, Unit] = db.flatMap(_.delete(key))
 

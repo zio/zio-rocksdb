@@ -52,7 +52,7 @@ object Deserializer extends CollectionDeserializers with TupleDeserializers {
 
 private[rocksdb] trait CollectionDeserializers extends PrimitiveDeserializers {
   val bytes: Deserializer[Any, Bytes] =
-    Deserializer[Any, Bytes](bs => UIO.succeed(Result(bs, Chunk.empty)))
+    Deserializer[Any, Bytes](bs => ZIO.succeed(Result(bs, Chunk.empty)))
 
   val byteArray: Deserializer[Any, Array[Byte]] =
     bytes.map(_.toArray)

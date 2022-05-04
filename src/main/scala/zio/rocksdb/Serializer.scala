@@ -46,7 +46,7 @@ object Serializer extends CollectionSerializers with TupleSerializers {
     Serializer[R, Either[A, B]](_.fold(l.apply, r.apply))
 
   val empty: Serializer[Any, Any] =
-    Serializer[Any, Any](_ => URIO.succeed(Chunk.empty))
+    Serializer[Any, Any](_ => ZIO.succeed(Chunk.empty))
 
   def option[R, A](enc: Serializer[R, A]): Serializer[R, Option[A]] =
     Serializer[R, Option[A]](_.fold[URIO[R, Bytes]](empty.apply(()))(enc.apply))
@@ -57,7 +57,7 @@ object Serializer extends CollectionSerializers with TupleSerializers {
 
 private[rocksdb] trait CollectionSerializers extends PrimitiveSerializers {
   val bytes: Serializer[Any, Bytes] =
-    Serializer[Any, Bytes](UIO.succeed(_))
+    Serializer[Any, Bytes](ZIO.succeed(_))
 
   val byteArray: Serializer[Any, Array[Byte]] =
     bytes.contramap(Chunk.fromArray)

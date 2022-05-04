@@ -149,17 +149,17 @@ object Transaction {
     live(db, new WriteOptions())
 
   def get(readOptions: jrocks.ReadOptions, key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.get(readOptions, key))
+    ZIO.serviceWithZIO(_.get(readOptions, key))
 
   def get(key: Array[Byte]): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.get(key))
+    ZIO.serviceWithZIO(_.get(key))
 
   def getForUpdate(
     readOptions: jrocks.ReadOptions,
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.getForUpdate(readOptions, key, exclusive))
+    ZIO.serviceWithZIO(_.getForUpdate(readOptions, key, exclusive))
 
   def getForUpdate(
     readOptions: jrocks.ReadOptions,
@@ -167,34 +167,34 @@ object Transaction {
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.getForUpdate(readOptions, cf, key, exclusive))
+    ZIO.serviceWithZIO(_.getForUpdate(readOptions, cf, key, exclusive))
 
   def getForUpdate(key: Array[Byte], exclusive: Boolean): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.getForUpdate(key, exclusive))
+    ZIO.serviceWithZIO(_.getForUpdate(key, exclusive))
 
   def getForUpdate(
     cf: ColumnFamilyHandle,
     key: Array[Byte],
     exclusive: Boolean
   ): RIO[Transaction, Option[Array[Byte]]] =
-    RIO.serviceWithZIO(_.getForUpdate(cf, key, exclusive))
+    ZIO.serviceWithZIO(_.getForUpdate(cf, key, exclusive))
 
   def put(key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.put(key, value))
+    ZIO.serviceWithZIO(_.put(key, value))
 
   def put(cf: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.put(cf, key, value))
+    ZIO.serviceWithZIO(_.put(cf, key, value))
 
   def delete(key: Array[Byte]): RIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.delete(key))
+    ZIO.serviceWithZIO(_.delete(key))
 
   def commit: RIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.commit)
+    ZIO.serviceWithZIO(_.commit)
 
   def close: URIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.close)
+    ZIO.serviceWithZIO(_.close)
 
   def rollback: RIO[Transaction, Unit] =
-    RIO.serviceWithZIO(_.rollback)
+    ZIO.serviceWithZIO(_.rollback)
 
 }

@@ -2,7 +2,7 @@ package zio.rocksdb
 
 import zio.Chunk
 import zio.test.Assertion._
-import zio.test.{ assertM, check, Gen }
+import zio.test.{ assertZIO, check, Gen }
 import zio.test.{ Gen, ZIOSpecDefault }
 
 object SerdeSpec extends ZIOSpecDefault {
@@ -62,6 +62,6 @@ object SerdeSpec extends ZIOSpecDefault {
 
   private def roundtrip[R, A](label: String, gen: Gen[R, A], ser: Serializer[R, A], deser: Deserializer[R, A]) =
     test(label)(check(gen) { x =>
-      assertM(ser(x).flatMap(deser.decode))(equalTo(Result(x, Chunk.empty)))
+      assertZIO(ser(x).flatMap(deser.decode))(equalTo(Result(x, Chunk.empty)))
     })
 }

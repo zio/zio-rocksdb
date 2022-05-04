@@ -39,7 +39,7 @@ object TransactionDBSpec extends ZIOSpecDefault {
         val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
         for {
-          _          <- RIO.foreachDiscard(data) { case (k, v) => TransactionDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+          _          <- ZIO.foreachDiscard(data) { case (k, v) => TransactionDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
           results    <- TransactionDB.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))

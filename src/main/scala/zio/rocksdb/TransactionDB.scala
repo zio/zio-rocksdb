@@ -104,20 +104,20 @@ object TransactionDB extends Operations[TransactionDB] {
   def atomically[R, E >: Throwable, A](writeOptions: jrocks.WriteOptions)(zio: ZIO[Transaction with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[TransactionDB with R, E, A] =
-    RIO.service[TransactionDB].flatMap(_.atomically[R, E, A](writeOptions)(zio))
+    ZIO.service[TransactionDB].flatMap(_.atomically[R, E, A](writeOptions)(zio))
 
   def atomically[R, E >: Throwable, A](zio: ZIO[Transaction with R, E, A])(
     implicit A: Atomically.TransactionWithSomething
   ): ZIO[TransactionDB with R, E, A] =
-    RIO.service[TransactionDB].flatMap(_.atomically[R, E, A](zio))
+    ZIO.service[TransactionDB].flatMap(_.atomically[R, E, A](zio))
 
   def atomically[E >: Throwable, A](writeOptions: jrocks.WriteOptions)(
     zio: ZIO[Transaction, E, A]
   )(implicit A: Atomically.TransactionOnly): ZIO[TransactionDB, E, A] =
-    RIO.service[TransactionDB].flatMap(_.atomically[E, A](writeOptions)(zio))
+    ZIO.service[TransactionDB].flatMap(_.atomically[E, A](writeOptions)(zio))
 
   def atomically[E >: Throwable, A](
     zio: ZIO[Transaction, E, A]
   )(implicit A: Atomically.TransactionOnly): ZIO[TransactionDB, E, A] =
-    RIO.service[TransactionDB].flatMap(_.atomically[E, A](zio))
+    ZIO.service[TransactionDB].flatMap(_.atomically[E, A](zio))
 }
