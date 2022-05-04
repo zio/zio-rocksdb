@@ -2,7 +2,7 @@ package zio.rocksdb
 
 import java.nio.charset.StandardCharsets.UTF_8
 import org.{ rocksdb => jrocks }
-import zio.{ RIO, ZLayer }
+import zio.{ RIO, ZIO, ZLayer }
 import zio.rocksdb.internal.ManagedPath
 import zio.test.Assertion._
 import zio.test._
@@ -35,7 +35,7 @@ object RocksDBSpec extends ZIOSpecDefault {
         val data = (1 to 10).map(i => (s"key$i", s"value$i")).toList
 
         for {
-          _          <- RIO.foreachDiscard(data) { case (k, v) => RocksDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
+          _          <- ZIO.foreachDiscard(data) { case (k, v) => RocksDB.put(k.getBytes(UTF_8), v.getBytes(UTF_8)) }
           results    <- RocksDB.newIterator.runCollect
           resultsStr = results.map { case (k, v) => new String(k, UTF_8) -> new String(v, UTF_8) }
         } yield assert(resultsStr)(hasSameElements(data))

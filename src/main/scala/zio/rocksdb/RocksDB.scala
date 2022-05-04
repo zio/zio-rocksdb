@@ -195,7 +195,7 @@ object RocksDB extends Operations[RocksDB] {
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
       ZStream
         .acquireReleaseWith(ZIO.attempt(db.newIterators(cfHandles.asJava)))(
-          its => UIO.foreach(its.toArray)(it => ZIO.succeed(it.asInstanceOf[RocksIterator].close()))
+          its => ZIO.foreach(its.toArray)(it => ZIO.succeed(it.asInstanceOf[RocksIterator].close()))
         )
         .flatMap { its =>
           ZStream.fromIterable {
