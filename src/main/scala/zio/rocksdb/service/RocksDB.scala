@@ -110,4 +110,9 @@ trait RocksDB {
    * Deletes ColumnFamilies given a list of ColumnFamilyHandles
    */
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  /**
+   * Applies batch updates to the db
+   */
+  def write(writeOptions: jrocks.WriteOptions, writeBatch: jrocks.WriteBatch): Task[Unit]
 }
