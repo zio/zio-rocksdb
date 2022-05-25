@@ -42,6 +42,16 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
     def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]] =
       Task(Option(db.get(cfHandle, key)))
 
+    def flush(flushOptions: jrocks.FlushOptions): Task[Unit] = Task(db.flush(flushOptions))
+
+    def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandle: jrocks.ColumnFamilyHandle): Task[Unit] =
+      Task(db.flush(flushOptions, columnFamilyHandle))
+
+    def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit] =
+      Task(db.flush(flushOptions, columnFamilyHandles.asJava))
+
+    def flushWal(sync: Boolean): Task[Unit] = Task(db.flushWal(sync))
+
     def initialHandles: Task[List[jrocks.ColumnFamilyHandle]] =
       Task.succeed(cfHandles)
 
