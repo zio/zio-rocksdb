@@ -3,6 +3,7 @@ package zio.rocksdb
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions, RocksIterator }
 import org.{ rocksdb => jrocks }
 import zio._
+import zio.rocksdb.iterator.{ Direction, Position }
 import zio.stream.{ Stream, ZStream }
 
 import scala.jdk.CollectionConverters._
@@ -66,14 +67,16 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
         db.multiGetAsList(handles.asJava, keys.asJava).asScala.toList.map(Option(_))
       }
 
-    private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromEffect(Task(it.seekToFirst())).drain ++
+    private def drainIterator(direction: Direction, position: Position)(
+      it: jrocks.RocksIterator
+    ): Stream[Throwable, (Array[Byte], Array[Byte])] =
+      ZStream.fromEffect(set(it, position)).drain ++
         ZStream.fromEffect(Task(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
             ZStream.fromEffect(Task(it.key() -> it.value())) ++ ZStream.repeatEffectOption {
               Task {
-                it.next()
+                step(it, direction)
 
                 if (!it.isValid) ZIO.fail(None)
                 else UIO(it.key() -> it.value())
@@ -81,17 +84,38 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
             }
         }
 
+    private def set(it: jrocks.RocksIterator, position: Position): Task[Unit] =
+      Task {
+        position match {
+          case Position.Last        => it.seekToLast()
+          case Position.First       => it.seekToFirst()
+          case Position.Target(key) => it.seek(key.toArray)
+        }
+      }
+
+    private def step(it: jrocks.RocksIterator, direction: Direction): Task[Unit] =
+      Task {
+        direction match {
+          case Direction.Forward  => it.next()
+          case Direction.Backward => it.prev()
+        }
+      }
+
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
+      newIterator(Direction.Forward, Position.First)
+
+    def newIterator(
+      direction: Direction,
+      position: Position
+    ): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .bracket(Task(db.newIterator()))(it => UIO(it.close()))
-        .flatMap(drainIterator)
-
-    def getIterator: Task[RocksIterator] = Task(db.newIterator())
+        .flatMap(drainIterator(direction, position))
 
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .bracket(Task(db.newIterator(cfHandle)))(it => UIO(it.close()))
-        .flatMap(drainIterator)
+        .flatMap(drainIterator(Direction.Forward, Position.First))
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
@@ -102,7 +126,7 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
         )
         .flatMap { its =>
           ZStream.fromIterable {
-            cfHandles.zip(its.asScala.toList.map(drainIterator))
+            cfHandles.zip(its.asScala.toList.map(drainIterator(Direction.Forward, Position.First)))
           }
         }
 

@@ -3,6 +3,7 @@ package zio.rocksdb.service
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
 import zio.Task
+import zio.rocksdb.iterator.{ Direction, Position }
 import zio.rocksdb.WriteBatch
 import zio.stream.Stream
 
@@ -75,9 +76,18 @@ trait RocksDB {
   ): Task[List[Option[Array[Byte]]]]
 
   /**
-   * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
+   * Scans the default ColumnFamily in the database and emits the results as a `ZStream`. The result is the same
+   * to call `newIterator(Forward, Start)`
    */
   def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])]
+
+  /**
+   * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
+   */
+  def newIterator(
+    direction: Direction,
+    position: Position
+  ): Stream[Throwable, (Array[Byte], Array[Byte])]
 
   /**
    * Scans a specific ColumnFamily in the database and emits the results as a `ZStream`.
