@@ -4,7 +4,7 @@ import org.{ rocksdb => jrocks }
 import zio.{ Task, TaskManaged }
 
 object WriteBatch {
-  final class Live private (batch: jrocks.WriteBatch) extends service.WriteBatch {
+  final class Live private (batch: jrocks.WriteBatch) {
     def put(key: Array[Byte], value: Array[Byte]): Task[Unit] = Task(batch.put(key, value))
 
     def put(cfHandle: ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] =
