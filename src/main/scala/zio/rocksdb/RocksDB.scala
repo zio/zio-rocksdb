@@ -70,7 +70,7 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
     private def drainIterator(direction: Direction, position: Position)(
       it: jrocks.RocksIterator
     ): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromEffect(set(it, position)).drain ++
+      ZStream.fromEffect(Task(set(it, position))).drain ++
         ZStream.fromEffect(Task(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
@@ -84,21 +84,17 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
             }
         }
 
-    private def set(it: jrocks.RocksIterator, position: Position): Task[Unit] =
-      Task {
-        position match {
-          case Position.Last        => it.seekToLast()
-          case Position.First       => it.seekToFirst()
-          case Position.Target(key) => it.seek(key.toArray)
-        }
+    private def set(it: jrocks.RocksIterator, position: Position): Unit =
+      position match {
+        case Position.Last        => it.seekToLast()
+        case Position.First       => it.seekToFirst()
+        case Position.Target(key) => it.seek(key.toArray)
       }
 
-    private def step(it: jrocks.RocksIterator, direction: Direction): Task[Unit] =
-      Task {
-        direction match {
-          case Direction.Forward  => it.next()
-          case Direction.Backward => it.prev()
-        }
+    private def step(it: jrocks.RocksIterator, direction: Direction): Unit =
+      direction match {
+        case Direction.Forward  => it.next()
+        case Direction.Backward => it.prev()
       }
 
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
