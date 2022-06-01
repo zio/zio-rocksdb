@@ -28,6 +28,26 @@ trait RocksDB {
   def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]]
 
   /**
+   * Flush all memory table data
+   */
+  def flush(flushOptions: jrocks.FlushOptions): Task[Unit]
+
+  /**
+   * Flush all memory table data.
+   */
+  def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandle: jrocks.ColumnFamilyHandle): Task[Unit]
+
+  /**
+   * Flush multiple column families.
+   */
+  def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  /**
+   * Flush the WAL memory buffer to the file
+   */
+  def flushWal(sync: Boolean): Task[Unit]
+
+  /**
    * Retrieves the list of ColumnFamily handles the database was opened with.
    *
    * Caveats:
