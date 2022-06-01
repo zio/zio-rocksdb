@@ -1,7 +1,7 @@
 package zio.rocksdb.service
 
-import org.rocksdb.{ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions}
-import org.{rocksdb => jrocks}
+import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
+import org.{ rocksdb => jrocks }
 import zio.Task
 import zio.rocksdb.WriteBatch
 import zio.stream.Stream

@@ -1,7 +1,7 @@
 package zio.rocksdb
 import org.rocksdb.ColumnFamilyHandle
-import org.{rocksdb => jrocks}
-import zio.{Task, TaskManaged}
+import org.{ rocksdb => jrocks }
+import zio.{ Task, TaskManaged }
 
 final class WriteBatch private (batch: jrocks.WriteBatch) {
   def put(key: Array[Byte], value: Array[Byte]): Task[Unit] = Task(batch.put(key, value))
