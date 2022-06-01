@@ -13,7 +13,7 @@ final class WriteBatch private (batch: jrocks.WriteBatch) {
 }
 
 object WriteBatch {
-  def open(): TaskManaged[WriteBatch] = make(new jrocks.WriteBatch())
+  def open: TaskManaged[WriteBatch] = make(new jrocks.WriteBatch())
 
   def open(reservedBytes: Int): TaskManaged[WriteBatch] = make(new jrocks.WriteBatch(reservedBytes))
 
