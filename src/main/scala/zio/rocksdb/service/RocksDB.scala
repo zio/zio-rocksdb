@@ -3,6 +3,7 @@ package zio.rocksdb.service
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
 import zio.Task
+import zio.rocksdb.WriteBatch
 import zio.stream.Stream
 
 trait RocksDB {
@@ -130,4 +131,6 @@ trait RocksDB {
    * Deletes ColumnFamilies given a list of ColumnFamilyHandles
    */
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit]
 }

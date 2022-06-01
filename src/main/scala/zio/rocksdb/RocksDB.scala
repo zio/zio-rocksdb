@@ -111,6 +111,9 @@ object RocksDB extends Operations[RocksDB, service.RocksDB] {
 
     def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] =
       Task(db.put(cfHandle, key, value))
+
+    def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit] =
+      Task(db.write(writeOptions, writeBatch.getUnderlying))
   }
 
   object Live {
