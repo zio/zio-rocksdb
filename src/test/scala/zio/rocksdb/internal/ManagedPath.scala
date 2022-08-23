@@ -1,17 +1,17 @@
 package zio.rocksdb.internal
 
-import zio.{ Task, URIO, ZManaged }
+import zio.{ Scope, Task, URIO, ZIO }
 
 import java.io.File
 import java.nio.file.{ Files, Path }
 
 object ManagedPath {
-  private def createTempDirectory: Task[Path] = Task {
+  private def createTempDirectory: Task[Path] = ZIO.attempt {
     Files.createTempDirectory("zio-rocksdb")
   }
 
   private def deleteDirectory(path: Path): Task[Unit] =
-    Task {
+    ZIO.attempt {
       def deleteRecursively(file: File): Unit = {
         if (file.isDirectory) {
           file.listFiles.foreach(deleteRecursively)
@@ -27,5 +27,5 @@ object ManagedPath {
   private def deleteDirectoryE(path: Path): URIO[Any, Unit] =
     deleteDirectory(path).orDie
 
-  def apply(): ZManaged[Any, Throwable, Path] = createTempDirectory.toManaged(deleteDirectoryE)
+  def apply(): ZIO[Scope, Throwable, Path] = ZIO.acquireRelease(createTempDirectory)(deleteDirectoryE)
 }

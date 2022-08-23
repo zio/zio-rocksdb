@@ -1,7 +1,5 @@
 package zio.rocksdb
 
-import zio.clock.Clock
-
 import java.{ lang => jlang }
 import java.nio.ByteBuffer
 import zio.{ Chunk, Ref, Schedule, UIO, ZIO }
@@ -54,12 +52,12 @@ object Deserializer extends CollectionDeserializers with TupleDeserializers {
 
 private[rocksdb] trait CollectionDeserializers extends PrimitiveDeserializers {
   val bytes: Deserializer[Any, Bytes] =
-    Deserializer[Any, Bytes](bs => UIO.succeed(Result(bs, Chunk.empty)))
+    Deserializer[Any, Bytes](bs => ZIO.succeed(Result(bs, Chunk.empty)))
 
   val byteArray: Deserializer[Any, Array[Byte]] =
     bytes.map(_.toArray)
 
-  def chunk[R, A](a: Deserializer[R, A]): Deserializer[R with Clock, Chunk[A]] =
+  def chunk[R, A](a: Deserializer[R, A]): Deserializer[R, Chunk[A]] =
     bytes.mapMResult(fromByteBuffer(a))
 
   def list[R, A](as: Deserializer[R, Chunk[A]]): Deserializer[R, List[A]] =
@@ -456,8 +454,8 @@ private[rocksdb] trait TupleDeserializers {
 private[rocksdb] trait PrimitiveDeserializers extends DeserializerUtilityFunctions {
   lazy val boolean: Deserializer[Any, Boolean] =
     byte.mapM {
-      case 0 => UIO(false)
-      case 1 => UIO(true)
+      case 0 => ZIO.succeed(false)
+      case 1 => ZIO.succeed(true)
       case x => ZIO.fail(DeserializeError.UnexpectedByte(x, List(0, 1)))
     }
 
@@ -491,7 +489,7 @@ private[rocksdb] trait DeserializerUtilityFunctions {
         if (head.size < n)
           ZIO.fail(DeserializeError.TooShort(bytes.length, n))
         else
-          ZIO.effectTotal {
+          ZIO.succeed {
             val buf = ByteBuffer.wrap(head.toArray)
             Result(f(buf), tail)
           }
@@ -500,7 +498,7 @@ private[rocksdb] trait DeserializerUtilityFunctions {
 
   def fromByteBuffer[R, A](
     deser: Deserializer[R, A]
-  )(bytes: Result[Bytes]): ZIO[R with Clock, DeserializeError, Result[Chunk[A]]] =
+  )(bytes: Result[Bytes]): ZIO[R, DeserializeError, Result[Chunk[A]]] =
     (for {
       bs <- Ref.make(bytes.value)
       as <- Ref.make[Chunk[A]](Chunk.empty)
