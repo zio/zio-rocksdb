@@ -3,6 +3,7 @@ package zio.rocksdb
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions, RocksIterator }
 import org.{ rocksdb => jrocks }
 import zio._
+import zio.rocksdb.iterator.{ Direction, Position }
 import zio.stream.{ Stream, ZStream }
 
 import scala.jdk.CollectionConverters._
@@ -18,6 +19,26 @@ trait RocksDB {
    * Delete a key from a specific ColumnFamily in the database.
    */
   def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
+
+  /**
+   * Flush all memory table data
+   */
+  def flush(flushOptions: jrocks.FlushOptions): Task[Unit]
+
+  /**
+   * Flush all memory table data.
+   */
+  def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandle: jrocks.ColumnFamilyHandle): Task[Unit]
+
+  /**
+   * Flush multiple column families.
+   */
+  def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  /**
+   * Flush the WAL memory buffer to the file
+   */
+  def flushWal(sync: Boolean): Task[Unit]
 
   /**
    * Retrieve a key from the default ColumnFamily in the database.
@@ -59,6 +80,14 @@ trait RocksDB {
    * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
    */
   def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])]
+
+  /**
+   * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
+   */
+  def newIterator(
+    direction: Direction,
+    position: Position
+  ): Stream[Throwable, (Array[Byte], Array[Byte])]
 
   /**
    * Scans a specific ColumnFamily in the database and emits the results as a `ZStream`.
@@ -112,6 +141,8 @@ trait RocksDB {
    * Deletes ColumnFamilies given a list of ColumnFamilyHandles
    */
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
+
+  def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit]
 }
 
 object RocksDB extends Operations[RocksDB] {
@@ -149,6 +180,18 @@ object RocksDB extends Operations[RocksDB] {
     def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]] =
       ZIO.attempt(Option(db.get(cfHandle, key)))
 
+    def flush(flushOptions: jrocks.FlushOptions): Task[Unit] =
+      ZIO.attempt(db.flush(flushOptions))
+
+    def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandle: jrocks.ColumnFamilyHandle): Task[Unit] =
+      ZIO.attempt(db.flush(flushOptions, columnFamilyHandle))
+
+    def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit] =
+      ZIO.attempt(db.flush(flushOptions, columnFamilyHandles.asJava))
+
+    def flushWal(sync: Boolean): Task[Unit] =
+      ZIO.attempt(db.flushWal(sync))
+
     def initialHandles: Task[List[jrocks.ColumnFamilyHandle]] =
       ZIO.succeed(cfHandles)
 
@@ -163,14 +206,16 @@ object RocksDB extends Operations[RocksDB] {
         db.multiGetAsList(handles.asJava, keys.asJava).asScala.toList.map(Option(_))
       }
 
-    private def drainIterator(it: jrocks.RocksIterator): Stream[Throwable, (Array[Byte], Array[Byte])] =
-      ZStream.fromZIO(ZIO.attempt(it.seekToFirst())).drain ++
+    private def drainIterator(direction: Direction, position: Position)(
+      it: jrocks.RocksIterator
+    ): Stream[Throwable, (Array[Byte], Array[Byte])] =
+      ZStream.fromZIO(ZIO.attempt(set(it, position))).drain ++
         ZStream.fromZIO(ZIO.attempt(it.isValid)).flatMap { valid =>
           if (!valid) ZStream.empty
           else
             ZStream.fromZIO(ZIO.attempt(it.key() -> it.value())) ++ ZStream.repeatZIOOption {
               ZIO.attempt {
-                it.next()
+                step(it, direction)
 
                 if (!it.isValid) ZIO.fail(None)
                 else ZIO.succeed(it.key() -> it.value())
@@ -178,17 +223,34 @@ object RocksDB extends Operations[RocksDB] {
             }
         }
 
-    def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
+    private def set(it: jrocks.RocksIterator, position: Position): Unit =
+      position match {
+        case Position.Last        => it.seekToLast()
+        case Position.First       => it.seekToFirst()
+        case Position.Target(key) => it.seek(key.toArray)
+      }
+
+    private def step(it: jrocks.RocksIterator, direction: Direction): Unit =
+      direction match {
+        case Direction.Forward  => it.next()
+        case Direction.Backward => it.prev()
+      }
+
+    def newIterator(
+      direction: Direction,
+      position: Position
+    ): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .acquireReleaseWith(ZIO.attempt(db.newIterator()))(it => ZIO.succeed(it.close()))
-        .flatMap(drainIterator)
+        .flatMap(drainIterator(direction, position))
 
-    def getIterator: Task[RocksIterator] = ZIO.attempt(db.newIterator())
+    def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
+      newIterator(Direction.Forward, Position.First)
 
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .acquireReleaseWith(ZIO.attempt(db.newIterator(cfHandle)))(it => ZIO.succeed(it.close()))
-        .flatMap(drainIterator)
+        .flatMap(drainIterator(Direction.Forward, Position.First))
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
@@ -199,7 +261,7 @@ object RocksDB extends Operations[RocksDB] {
         )
         .flatMap { its =>
           ZStream.fromIterable {
-            cfHandles.zip(its.asScala.toList.map(drainIterator))
+            cfHandles.zip(its.asScala.toList.map(drainIterator(Direction.Forward, Position.First)))
           }
         }
 
@@ -208,6 +270,9 @@ object RocksDB extends Operations[RocksDB] {
 
     def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] =
       ZIO.attempt(db.put(cfHandle, key, value))
+
+    def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit] =
+      ZIO.attempt(db.write(writeOptions, writeBatch.getUnderlying))
   }
 
   object Live {

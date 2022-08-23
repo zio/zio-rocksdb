@@ -43,7 +43,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0",
   "dev.zio"                %% "zio-test"                % zioVersion % "test",
   "dev.zio"                %% "zio-test-sbt"            % zioVersion % "test",
-  "org.rocksdb"            % "rocksdbjni"               % "6.27.3"
+  "org.rocksdb"            % "rocksdbjni"               % "7.4.5"
 )
 
 scalacOptions --= Seq("-Xlint:nullary-override")
