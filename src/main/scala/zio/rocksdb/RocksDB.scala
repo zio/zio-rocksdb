@@ -6,6 +6,7 @@ import zio._
 import zio.rocksdb.iterator.{ Direction, Position }
 import zio.stream.{ Stream, ZStream }
 
+import java.nio.charset.StandardCharsets
 import scala.jdk.CollectionConverters._
 
 trait RocksDB {
@@ -291,6 +292,21 @@ object RocksDB extends Operations[RocksDB] {
       make(db, handles.asScala.toList)
     }
 
+    def openAllColumnFamilies(
+      options: jrocks.DBOptions,
+      columnFamilyOptions: jrocks.ColumnFamilyOptions,
+      path: String
+    ): ZIO[Scope, Throwable, RocksDB] =
+      for {
+        rawColumnFamilies <- listColumnFamilies(new jrocks.Options(options, columnFamilyOptions), path)
+        rawColumnFamiliesWithDefault = if (rawColumnFamilies.exists(_.sameElements(rawColumnFamilies)))
+          rawColumnFamilies
+        else
+          rawDefaultColumnFamily :: rawColumnFamilies
+        columnFamilies = rawColumnFamilies.map(bytes => new ColumnFamilyDescriptor(bytes))
+        live           <- open(options, path, columnFamilies)
+      } yield live
+
     def open(path: String): ZIO[Scope, Throwable, RocksDB] =
       make(ZIO.attempt(jrocks.RocksDB.open(path)), Nil)
 
@@ -302,6 +318,8 @@ object RocksDB extends Operations[RocksDB] {
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): ZIO[Scope, Throwable, RocksDB] =
       ZIO.acquireRelease(db)(db => ZIO.attempt(db.closeE()).orDie).map(new Live(_, cfHandles))
+
+    private[rocksdb] val rawDefaultColumnFamily: Array[Byte] = "default".getBytes(StandardCharsets.UTF_8)
   }
 
   /**
@@ -331,4 +349,14 @@ object RocksDB extends Operations[RocksDB] {
     ZLayer.scoped {
       Live.open(options, path)
     }
+
+  /**
+   * Opens all existing column families for the database at the specified path
+   */
+  def liveAllColumnFamilies(
+    options: jrocks.DBOptions,
+    columnFamilyOptions: jrocks.ColumnFamilyOptions,
+    path: String
+  ): ZLayer[Any, Throwable, RocksDB] =
+    ZLayer.scoped(Live.openAllColumnFamilies(options, columnFamilyOptions, path))
 }
