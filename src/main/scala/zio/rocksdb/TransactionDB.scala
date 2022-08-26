@@ -2,6 +2,9 @@ package zio.rocksdb
 
 import org.{ rocksdb => jrocks }
 import zio._
+import zio.rocksdb.RocksDB.Live.rawDefaultColumnFamily
+
+import scala.jdk.CollectionConverters._
 
 trait TransactionDB extends RocksDB {
 
@@ -45,7 +48,9 @@ trait TransactionDB extends RocksDB {
 }
 
 object TransactionDB extends Operations[TransactionDB] {
-  private final class Live private (db: jrocks.TransactionDB) extends RocksDB.Live(db, Nil) with TransactionDB {
+  private final class Live private (db: jrocks.TransactionDB, cfHandles: List[jrocks.ColumnFamilyHandle])
+      extends RocksDB.Live(db, cfHandles)
+      with TransactionDB {
     override def beginTransaction(writeOptions: jrocks.WriteOptions): ZIO[Scope, Throwable, Transaction] =
       Transaction.Live.begin(db, writeOptions)
 
@@ -66,18 +71,51 @@ object TransactionDB extends Operations[TransactionDB] {
 
   object Live {
     def open(
+      options: jrocks.DBOptions,
+      transactionDBOptions: jrocks.TransactionDBOptions,
+      path: String,
+      columnFamilyDescriptors: List[jrocks.ColumnFamilyDescriptor]
+    ): ZIO[Scope, Throwable, TransactionDB] = {
+      val handles = new java.util.ArrayList[jrocks.ColumnFamilyHandle](columnFamilyDescriptors.size)
+      ZIO
+        .acquireRelease(
+          ZIO.attempt(
+            jrocks.TransactionDB.open(options, transactionDBOptions, path, columnFamilyDescriptors.asJava, handles)
+          )
+        )(db => ZIO.attempt(db.closeE()).orDie)
+        .map(db => new Live(db, handles.asScala.toList))
+    }
+
+    def open(
       options: jrocks.Options,
       transactionDBOptions: jrocks.TransactionDBOptions,
       path: String
     ): ZIO[Scope, Throwable, TransactionDB] =
-      ZIO.acquireRelease(ZIO.attempt(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path))))(
+      ZIO.acquireRelease(ZIO.attempt(new Live(jrocks.TransactionDB.open(options, transactionDBOptions, path), Nil)))(
         _.closeE.orDie
       )
 
     def open(options: jrocks.Options, path: String): ZIO[Scope, Throwable, TransactionDB] =
       open(options, new jrocks.TransactionDBOptions(), path)
+
     def open(path: String): ZIO[Scope, Throwable, TransactionDB] =
       open(new jrocks.Options(), path)
+
+    def openAllColumnFamilies(
+      options: jrocks.DBOptions,
+      columnFamilyOptions: jrocks.ColumnFamilyOptions,
+      transactionDBOptions: jrocks.TransactionDBOptions,
+      path: String
+    ): ZIO[Scope, Throwable, TransactionDB] =
+      for {
+        rawColumnFamilies <- RocksDB.Live.listColumnFamilies(new jrocks.Options(options, columnFamilyOptions), path)
+        rawColumnFamiliesWithDefault = if (rawColumnFamilies.exists(_.sameElements(rawColumnFamilies)))
+          rawColumnFamilies
+        else
+          rawDefaultColumnFamily :: rawColumnFamilies
+        columnFamilies = rawColumnFamiliesWithDefault.map(bytes => new jrocks.ColumnFamilyDescriptor(bytes))
+        live           <- open(options, transactionDBOptions, path, columnFamilies)
+      } yield live
   }
 
   def live(
@@ -91,6 +129,14 @@ object TransactionDB extends Operations[TransactionDB] {
 
   def live(options: jrocks.Options, path: String): ZLayer[Any, Throwable, TransactionDB] =
     live(options, new jrocks.TransactionDBOptions(), path)
+
+  def liveAllColumnFamilies(
+    options: jrocks.DBOptions,
+    columnFamilyOptions: jrocks.ColumnFamilyOptions,
+    transactionDBOptions: jrocks.TransactionDBOptions,
+    path: String
+  ): ZLayer[Any, Throwable, TransactionDB] =
+    ZLayer.scoped(Live.openAllColumnFamilies(options, columnFamilyOptions, transactionDBOptions, path))
 
   def beginTransaction(writeOptions: jrocks.WriteOptions): ZIO[TransactionDB with Scope, Throwable, Transaction] =
     for {
