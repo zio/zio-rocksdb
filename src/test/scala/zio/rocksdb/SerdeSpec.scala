@@ -8,35 +8,40 @@ import zio.test.{ Gen, ZIOSpecDefault }
 object SerdeSpec extends ZIOSpecDefault {
   override def spec = suite("SerdeSpec")(
     suite("primitive types")(
-      roundtrip("boolean", Gen.boolean, Serializer.boolean, Deserializer.boolean),
-      roundtrip("byte", Gen.byte, Serializer.byte, Deserializer.byte),
-      roundtrip("char", Gen.char, Serializer.char, Deserializer.char),
-      roundtrip("double", Gen.double(Double.MinValue, Double.MaxValue), Serializer.double, Deserializer.double),
-      roundtrip("float", Gen.float, Serializer.float, Deserializer.float),
-      roundtrip("int", Gen.int, Serializer.int, Deserializer.int),
-      roundtrip("long", Gen.long, Serializer.long, Deserializer.long),
-      roundtrip("short", Gen.short, Serializer.short, Deserializer.short)
+      roundtrip[Any, Boolean]("boolean", Gen.boolean, Serializer.boolean, Deserializer.boolean),
+      roundtrip[Any, Byte]("byte", Gen.byte, Serializer.byte, Deserializer.byte),
+      roundtrip[Any, Char]("char", Gen.char, Serializer.char, Deserializer.char),
+      roundtrip[Any, Double](
+        "double",
+        Gen.double(Double.MinValue, Double.MaxValue),
+        Serializer.double,
+        Deserializer.double
+      ),
+      roundtrip[Any, Float]("float", Gen.float, Serializer.float, Deserializer.float),
+      roundtrip[Any, Int]("int", Gen.int, Serializer.int, Deserializer.int),
+      roundtrip[Any, Long]("long", Gen.long, Serializer.long, Deserializer.long),
+      roundtrip[Any, Short]("short", Gen.short, Serializer.short, Deserializer.short)
     ),
     suite("tuples")(
-      roundtrip(
+      roundtrip[Any, (Int, Int)](
         "tuple2",
         Gen.int zip Gen.int,
         Serializer.tuple2(Serializer.int, Serializer.int),
         Deserializer.tuple2(Deserializer.int, Deserializer.int)
       ),
-      roundtrip(
+      roundtrip[Any, (Int, Int, Int)](
         "tuple3",
         Gen.int zip Gen.int zip Gen.int,
         Serializer.tuple3(Serializer.int, Serializer.int, Serializer.int),
         Deserializer.tuple3(Deserializer.int, Deserializer.int, Deserializer.int)
       ),
-      roundtrip(
+      roundtrip[Any, (Int, Int, Int, Int)](
         "tuple4",
         Gen.int zip Gen.int zip Gen.int zip Gen.int,
         Serializer.tuple4(Serializer.int, Serializer.int, Serializer.int, Serializer.int),
         Deserializer.tuple4(Deserializer.int, Deserializer.int, Deserializer.int, Deserializer.int)
       ),
-      roundtrip(
+      roundtrip[Any, (Int, Int, Int, Int, Int)](
         "tuple5",
         Gen.int zip Gen.int zip Gen.int zip Gen.int zip Gen.int,
         Serializer.tuple5(Serializer.int, Serializer.int, Serializer.int, Serializer.int, Serializer.int),
