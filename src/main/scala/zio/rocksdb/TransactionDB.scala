@@ -2,6 +2,7 @@ package zio.rocksdb
 
 import org.{ rocksdb => jrocks }
 import zio._
+import zio.rocksdb.RocksDB.Live.rawDefaultColumnFamily
 
 import scala.jdk.CollectionConverters._
 
@@ -108,8 +109,12 @@ object TransactionDB extends Operations[TransactionDB] {
     ): ZIO[Scope, Throwable, TransactionDB] =
       for {
         rawColumnFamilies <- RocksDB.Live.listColumnFamilies(new jrocks.Options(options, columnFamilyOptions), path)
-        columnFamilies    = rawColumnFamilies.map(bytes => new jrocks.ColumnFamilyDescriptor(bytes))
-        live              <- open(options, transactionDBOptions, path, columnFamilies)
+        rawColumnFamiliesWithDefault = if (rawColumnFamilies.exists(_.sameElements(rawColumnFamilies)))
+          rawColumnFamilies
+        else
+          rawDefaultColumnFamily :: rawColumnFamilies
+        columnFamilies = rawColumnFamiliesWithDefault.map(bytes => new jrocks.ColumnFamilyDescriptor(bytes))
+        live           <- open(options, transactionDBOptions, path, columnFamilies)
       } yield live
   }
 
