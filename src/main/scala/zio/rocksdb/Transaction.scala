@@ -101,7 +101,7 @@ object Transaction {
 
     override def put(key: Array[Byte], value: Array[Byte]): Task[Unit] =
       semaphore.withPermit {
-        ZIO.debug("acquired permit") *> ZIO.succeed(transaction.put(key, value)) <* ZIO.debug("releasing permit")
+        ZIO.attempt(transaction.put(key, value))
       }
 
     override def delete(key: Array[Byte]): Task[Unit] = taskWithPermit {
