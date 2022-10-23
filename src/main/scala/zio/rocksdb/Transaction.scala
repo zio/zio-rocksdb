@@ -59,6 +59,11 @@ trait Transaction {
   def delete(key: Array[Byte]): Task[Unit]
 
   /**
+   * Deletes a key using this transaction from a given column family
+   */
+  def delete(cfHandle: ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
+
+  /**
    * Commits all the changes using this transaction.
    */
   def commit: Task[Unit]
@@ -101,6 +106,10 @@ object Transaction {
 
     override def delete(key: Array[Byte]): Task[Unit] = taskWithPermit {
       transaction.delete(key)
+    }
+
+    override def delete(cfHandle: ColumnFamilyHandle, key: Array[Byte]): Task[Unit] = taskWithPermit {
+      transaction.delete(cfHandle, key)
     }
 
     override def commit: Task[Unit] = taskWithPermit {
@@ -187,6 +196,9 @@ object Transaction {
 
   def delete(key: Array[Byte]): RIO[Transaction, Unit] =
     ZIO.serviceWithZIO(_.delete(key))
+
+  def delete(cf: ColumnFamilyHandle, key: Array[Byte]): RIO[Transaction, Unit] =
+    ZIO.serviceWithZIO(_.delete(cf, key))
 
   def commit: RIO[Transaction, Unit] =
     ZIO.serviceWithZIO(_.commit)
