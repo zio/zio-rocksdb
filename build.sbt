@@ -4,7 +4,7 @@ val allScala  = Seq(mainScala, "2.13.3")
 inThisBuild(
   List(
     organization := "dev.zio",
-    homepage := Some(url("https://github.com/zio/zio-rocksdb")),
+    homepage := Some(url("https://zio.dev/zio-rocksdb/")),
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     useCoursier := false,
     scalaVersion := mainScala,
@@ -52,3 +52,13 @@ testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+
+lazy val docs = project
+  .in(file("zio-rocksdb-docs"))
+  .settings(
+    publish / skip := true,
+    moduleName := "zio-rocksdb-docs",
+    scalacOptions -= "-Yno-imports",
+    scalacOptions -= "-Xfatal-warnings"
+  )
+  .enablePlugins(WebsitePlugin)
