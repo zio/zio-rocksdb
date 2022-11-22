@@ -53,12 +53,4 @@ testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
 
-lazy val docs = project
-  .in(file("zio-rocksdb-docs"))
-  .settings(
-    publish / skip := true,
-    moduleName := "zio-rocksdb-docs",
-    scalacOptions -= "-Yno-imports",
-    scalacOptions -= "-Xfatal-warnings"
-  )
-  .enablePlugins(WebsitePlugin)
+enablePlugins(WebsitePlugin)
