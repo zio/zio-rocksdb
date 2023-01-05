@@ -1,6 +1,14 @@
 const sidebars = {
   sidebar: [
-    "index"
+    {
+      type: "category",
+      label: "ZIO RocksDB",
+      collapsed: false,
+      link: { type: "doc", id: "index" },
+      items: [ 
+        "transaction-api" 
+      ]
+    }
   ]
 };
 
