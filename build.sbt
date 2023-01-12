@@ -62,13 +62,10 @@ lazy val docs = project
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings",
     projectName := "ZIO RocksDB",
-    badgeInfo := Some(
-      BadgeInfo(
-        artifact = "zio-rocksdb_2.12",
-        projectStage = ProjectStage.Development
-      )
-    ),
+    mainModuleName := (rocksdb / moduleName).value,
+    projectStage := ProjectStage.Development,
     docsPublishBranch := "zio2",
+    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(rocksdb),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion
     ),
