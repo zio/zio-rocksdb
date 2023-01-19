@@ -34,8 +34,10 @@ addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck"
 
 val zioVersion = "2.0.0"
 
-lazy val root =
-  project.in(file(".")).settings(publish / skip := true).aggregate(rocksdb, docs)
+lazy val root = project
+  .in(file("."))
+  .settings(publish / skip := true)
+  .aggregate(rocksdb, docs)
 
 lazy val rocksdb =
   project
@@ -68,7 +70,6 @@ lazy val docs = project
     projectStage := ProjectStage.Development,
     docsPublishBranch := "zio2",
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(rocksdb),
-    libraryDependencies ++= Seq("dev.zio" %% "zio" % zioVersion),
     readmeLicense += "\n\nCopyright 2019 Itamar Ravid and the zio-rocksdb contributors. All rights reserved."
   )
   .dependsOn(rocksdb)
