@@ -2,6 +2,7 @@ package zio.rocksdb
 
 import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle, ColumnFamilyOptions }
 import org.{ rocksdb => jrocks }
+import zio.rocksdb.iterator.{ Direction, Position }
 import zio.stream.ZStream
 import zio.{ RIO, Tag, ZIO }
 
@@ -29,6 +30,13 @@ abstract class Operations[R <: RocksDB](implicit tagged: Tag[R]) {
 
   def newIterator(cfHandle: jrocks.ColumnFamilyHandle): ZStream[R, Throwable, (Array[Byte], Array[Byte])] =
     ZStream.unwrap(db map (_.newIterator(cfHandle)))
+
+  def newIterator(
+    cfHandle: jrocks.ColumnFamilyHandle,
+    direction: Direction,
+    position: Position
+  ): ZStream[R, Throwable, (Array[Byte], Array[Byte])] =
+    ZStream.unwrap(db map (_.newIterator(cfHandle, direction, position)))
 
   def newIterators(
     cfHandles: List[jrocks.ColumnFamilyHandle]
