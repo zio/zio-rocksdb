@@ -96,6 +96,16 @@ trait RocksDB {
   def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])]
 
   /**
+   * Scans a specific ColumnFamily in the database by specifying direction and position and
+   * emits the results as a `ZStream`.
+   */
+  def newIterator(
+    cfHandle: jrocks.ColumnFamilyHandle,
+    direction: Direction,
+    position: Position
+  ): Stream[Throwable, (Array[Byte], Array[Byte])]
+
+  /**
    * Scans multiple ColumnFamilies in the database and emits the results in multiple streams,
    * whereas the streams themselves are also emitted in a `ZStream`.
    */
@@ -252,6 +262,15 @@ object RocksDB extends Operations[RocksDB] {
       ZStream
         .acquireReleaseWith(ZIO.attempt(db.newIterator(cfHandle)))(it => ZIO.succeed(it.close()))
         .flatMap(drainIterator(Direction.Forward, Position.First))
+
+    def newIterator(
+      cfHandle: ColumnFamilyHandle,
+      direction: Direction,
+      position: Position
+    ): Stream[Throwable, (Array[Byte], Array[Byte])] =
+      ZStream
+        .acquireReleaseWith(ZIO.attempt(db.newIterator(cfHandle)))(it => ZIO.succeed(it.close()))
+        .flatMap(drainIterator(direction, position))
 
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
