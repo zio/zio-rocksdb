@@ -1,5 +1,5 @@
-val mainScala = "2.12.16"
-val allScala  = Seq(mainScala, "2.13.8", "3.1.3")
+val mainScala = "2.12.18"
+val allScala  = Seq(mainScala, "2.13.12", "3.3.1")
 
 inThisBuild(
   List(
@@ -36,14 +36,14 @@ enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot)
 buildInfoPackage := "zio.rocksdb"
 
-val zioVersion = "2.0.0"
+val zioVersion = "2.0.19"
 
 libraryDependencies ++= Seq(
   "dev.zio"                %% "zio-streams"             % zioVersion,
-  "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0",
+  "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
   "dev.zio"                %% "zio-test"                % zioVersion % "test",
   "dev.zio"                %% "zio-test-sbt"            % zioVersion % "test",
-  "org.rocksdb"            % "rocksdbjni"               % "7.4.5"
+  "org.rocksdb"            % "rocksdbjni"               % "7.10.2"
 )
 
 scalacOptions --= Seq("-Xlint:nullary-override")
