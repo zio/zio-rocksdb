@@ -20,6 +20,8 @@ jobs:
           fetch-depth: 0
       - name: Setup Scala and Java
         uses: olafurpg/setup-scala@v11
+        with:
+          java-version: 'zulu@1.17'
       - name: Cache scala dependencies
         uses: coursier/cache-action@v5
       - name: Lint code
@@ -47,7 +49,7 @@ jobs:
         run: sbt ++${{ matrix.scala }}! test
 
   publish:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.event_name != 'pull_request'
     steps:
@@ -57,6 +59,8 @@ jobs:
           fetch-depth: 0
       - name: Setup Scala and Java 
         uses: olafurpg/setup-scala@v11
+        with:
+          java-version: 'zulu@1.17'
       - name: Cache scala dependencies
         uses: coursier/cache-action@v5
       - name: Release artifacts
