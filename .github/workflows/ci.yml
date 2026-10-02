@@ -79,8 +79,9 @@ jobs:
       fail-fast: false
       matrix:
         java:
-        - '11'
         - '17'
+        - '21'
+        - '25'
         scala-project:
         - ++2.12.20 zio-rocksdb
         - ++2.13.15 zio-rocksdb
