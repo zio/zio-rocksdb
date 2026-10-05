@@ -33,7 +33,7 @@ name := "zio-rocksdb"
 
 ThisBuild / ciEnabledBranches := Seq("master", "zio2")
 ThisBuild / ciTargetScalaVersions := Map("zio-rocksdb" -> allScala)
-ThisBuild / ciTargetJavaVersions := Seq("11", "17")
+ThisBuild / ciTargetJavaVersions := Seq("17", "21", "25")
 ThisBuild / ciDefaultJavaVersion := "17"
 ThisBuild / ciEnableScalaSteward := false
 ThisBuild / ciEnableDependabot := false
