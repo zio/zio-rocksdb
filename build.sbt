@@ -30,6 +30,17 @@ inThisBuild(
 )
 
 name := "zio-rocksdb"
+
+ThisBuild / ciEnabledBranches := Seq("master", "zio2")
+ThisBuild / ciTargetScalaVersions := Map("zio-rocksdb" -> allScala)
+ThisBuild / ciTargetJavaVersions := Seq("17", "21", "25")
+ThisBuild / ciDefaultJavaVersion := "17"
+ThisBuild / ciEnableScalaSteward := false
+ThisBuild / ciEnableDependabot := false
+ThisBuild / ciCheckArtifactsBuildSteps := Seq.empty
+ThisBuild / ciCheckWebsiteBuildProcess := Seq.empty
+ThisBuild / ciUpdateReadmeJobs := Seq.empty
+ThisBuild / ciPostReleaseJobs := Seq.empty
 scalafmtOnCompile := true
 
 enablePlugins(BuildInfoPlugin)
@@ -52,3 +63,5 @@ testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+
+addCommandAlias("lint", "check")
