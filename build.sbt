@@ -77,6 +77,10 @@ addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck"
 
 addCommandAlias("lint", "check")
 
+// Explicit root without aggregation: `+Test/compile` etc. must not pull in the docs project, which only builds on 2.12
+// and depends on the root project.
+lazy val root = project.in(file("."))
+
 lazy val docs = project
   .in(file("zio-rocksdb-docs"))
   .settings(
