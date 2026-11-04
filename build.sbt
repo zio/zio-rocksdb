@@ -1,3 +1,5 @@
+import zio.sbt.githubactions.Step
+
 val mainScala = "2.12.20"
 val allScala  = Seq(mainScala, "2.13.15", "3.3.4")
 
@@ -38,9 +40,18 @@ ThisBuild / ciDefaultJavaVersion := "17"
 ThisBuild / ciEnableScalaSteward := false
 ThisBuild / ciEnableDependabot := false
 ThisBuild / ciCheckArtifactsBuildSteps := Seq.empty
-ThisBuild / ciCheckWebsiteBuildProcess := Seq.empty
-ThisBuild / ciUpdateReadmeJobs := Seq.empty
-ThisBuild / ciPostReleaseJobs := Seq.empty
+// The generated release-docs job runs `npm publish`, which needs NODE_AUTH_TOKEN to authenticate against the
+// npm registry. Its steps are nested in a StepSequence, so the fix-up recurses into it.
+ThisBuild / ciPostReleaseJobs ~= { jobs =>
+  def addNpmToken(step: Step): Step = step match {
+    case s: Step.SingleStep if s.name == "Publish Docs to NPM Registry" =>
+      s.copy(env = s.env + ("NODE_AUTH_TOKEN" -> "${{ secrets.NPM_TOKEN }}"))
+    case s: Step.StepSequence => Step.StepSequence(s.steps.map(addNpmToken))
+    case other                => other
+  }
+
+  jobs.map(job => if (job.id != "release-docs") job else job.copy(steps = job.steps.map(addNpmToken)))
+}
 scalafmtOnCompile := true
 
 enablePlugins(BuildInfoPlugin)
@@ -65,3 +76,22 @@ addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
 
 addCommandAlias("lint", "check")
+
+// Explicit root without aggregation: `+Test/compile` etc. must not pull in the docs project, which only builds on 2.12
+// and depends on the root project.
+lazy val root = project.in(file("."))
+
+lazy val docs = project
+  .in(file("zio-rocksdb-docs"))
+  .settings(
+    moduleName := "zio-rocksdb-docs",
+    scalacOptions -= "-Yno-imports",
+    scalacOptions -= "-Xfatal-warnings",
+    projectName := "ZIO RocksDB",
+    mainModuleName := (LocalRootProject / moduleName).value,
+    projectStage := ProjectStage.Development,
+    crossScalaVersions := Seq(mainScala),
+    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(LocalRootProject)
+  )
+  .dependsOn(LocalRootProject)
+  .enablePlugins(WebsitePlugin)
