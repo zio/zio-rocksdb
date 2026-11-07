@@ -2,88 +2,105 @@
 id: index
 title: "Introduction to ZIO RocksDB"
 sidebar_label: "ZIO RocksDB"
+description: "ZIO RocksDB is a ZIO-native wrapper around the RocksDB embedded key-value store: layers, streaming iterators, transactions and typed serialization."
+keywords:
+  - "RocksDB"
+  - "embedded key-value store"
+  - "ZIO layer"
+  - "persistent storage"
 ---
 
-[ZIO RocksDB](https://github.com/zio/zio-rocksdb) is a ZIO-based interface to RocksDB.
-
-RocksDB is an embeddable persistent key-value store that is optimized for fast storage. ZIO RocksDB provides us a functional ZIO wrapper around its Java API.
+[ZIO RocksDB](https://github.com/zio/zio-rocksdb) is a ZIO-based interface to [RocksDB](https://rocksdb.org), an embeddable persistent key-value store that is optimized for fast storage. The library wraps the RocksDB Java API (`rocksdbjni`) so that a database handle is a `ZLayer`, every operation is a `ZIO` effect, and scans are `ZStream`s.
 
 @PROJECT_BADGES@
 
+## What the Library Provides
+
+ZIO RocksDB covers the parts of the RocksDB API that an application touches most often:
+
+| Capability                          | Entry point                           | Guide                                       |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------- |
+| Reading and writing keys            | `RocksDB`                             | This page                                   |
+| Typed keys and values               | `Serializer`, `Deserializer`, `Serde` | [Serialization](./serialization.md)         |
+| Scanning and range queries          | `RocksDB#newIterator`                 | [Iterators and Range Scans](./iterators.md) |
+| Atomic multi-key updates            | `TransactionDB`, `Transaction`        | [Transactions](./transactions.md)           |
+| Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`         | [Write Batches](./write-batch.md)           |
+
 ## Installation
 
-In order to use this library, we need to add the following line in our `build.sbt` file:
+To use the library, add the following line to `build.sbt`:
 
 ```scala
 libraryDependencies += "dev.zio" %% "zio-rocksdb" % "@VERSION@"
 ```
 
-## Example 1
+The library is published for Scala 2.12, 2.13 and 3, requires ZIO 2, and runs on JDK 17 or newer. The native RocksDB binaries come with the `rocksdbjni` dependency, so no separate installation of RocksDB is needed.
 
-Use the provided `RocksDB` wrapper:
+## Getting Started
+
+Every operation in ZIO RocksDB takes and returns `Array[Byte]`, because that is what RocksDB stores. The examples below encode strings as UTF-8 by hand; to avoid this for richer types, see [Serialization](./serialization.md).
+
+### Opening a Database
+
+To open a database, build a `ZLayer` with `RocksDB.live`. The layer opens the database when the layer is built and closes it when the enclosing `Scope` ends, so the handle cannot leak. To create the database directory when it does not exist yet, pass an `Options` value with `setCreateIfMissing(true)`:
+
+```scala mdoc:compile-only
+import org.rocksdb.Options
+import zio._
+import zio.rocksdb.RocksDB
+
+val database: ZLayer[Any, Throwable, RocksDB] =
+  RocksDB.live(new Options().setCreateIfMissing(true), "/tmp/zio-rocksdb-intro")
+```
+
+`RocksDB.live(path)` is a shorthand that opens the database with RocksDB's default options.
+
+### Reading, Writing and Deleting Keys
+
+Once a `RocksDB` layer is available, the accessor methods on the `RocksDB` companion object write, read and delete keys. `RocksDB.get` returns `None` when the key does not exist:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8
+import org.rocksdb.Options
+import zio._
 import zio.rocksdb.RocksDB
 
-val key   = "key".getBytes(UTF_8)
-val value = "value".getBytes(UTF_8)
+object IntroExample extends ZIOAppDefault {
+  private val key   = "greeting".getBytes(UTF_8)
+  private val value = "hello".getBytes(UTF_8)
 
-val database  = RocksDB.live("/data/state")
-val readWrite = RocksDB.put(key, value) *> RocksDB.get(key)
-val result    = readWrite.provide(database)
-```
-
-## Example 2
-
-An example of writing and reading key/value pairs and also using transactional operations when using RocksDB:
-
-```scala mdoc:compile-only
-import zio._
-import zio.rocksdb._
-
-import java.nio.charset.StandardCharsets._
-
-object ZIORocksDBExample extends ZIOAppDefault {
-
-  private def bytesToString(bytes: Array[Byte]): String = new String(bytes, UTF_8)
-  private def bytesToInt(bytes: Array[Byte]): Int       = bytesToString(bytes).toInt
-
-  val job1: ZIO[RocksDB, Throwable, Unit] =
+  private val program: ZIO[RocksDB, Throwable, Unit] =
     for {
-      _ <- RocksDB.put(
-        "Key".getBytes(UTF_8),
-        "Value".getBytes(UTF_8)
-      )
-      result       <- RocksDB.get("Key".getBytes(UTF_8))
-      stringResult = result.map(bytesToString)
-      _            <- Console.printLine(s"value: $stringResult")
+      _       <- RocksDB.put(key, value)
+      found   <- RocksDB.get(key)
+      _       <- Console.printLine(found.map(new String(_, UTF_8)))
+      _       <- RocksDB.delete(key)
+      missing <- RocksDB.get(key)
+      _       <- Console.printLine(missing.isEmpty)
     } yield ()
-
-  val job2: ZIO[TransactionDB, Throwable, Unit] =
-    for {
-      key <- ZIO.succeed("COUNT".getBytes(UTF_8))
-      _   <- TransactionDB.put(key, 0.toString.getBytes(UTF_8))
-      _ <- ZIO.foreachParDiscard(0 until 10) { _ =>
-        TransactionDB.atomically {
-          Transaction.getForUpdate(key, exclusive = true) flatMap { iCount =>
-            Transaction.put(key, iCount.map(bytesToInt).map(_ + 1).getOrElse(1).toString.getBytes(UTF_8))
-          }
-        }
-      }
-      value        <- TransactionDB.get(key)
-      counterValue = value.map(bytesToInt)
-      _            <- Console.printLine(s"The value of counter: $counterValue") // Must be 10
-    } yield ()
-
-  private val transactional_db =
-    TransactionDB.live(new org.rocksdb.Options().setCreateIfMissing(true), "tr_db")
-
-  private val rocks_db =
-    RocksDB.live(new org.rocksdb.Options().setCreateIfMissing(true), "rocks_db")
 
   def run =
-    (job1.provide(rocks_db) <*> job2.provide(transactional_db))
-      .foldCauseZIO(cause => Console.printLine(cause.prettyPrint) *> ZIO.succeed(1), _ => ZIO.succeed(0))
+    program.provide(RocksDB.live(new Options().setCreateIfMissing(true), "/tmp/zio-rocksdb-intro"))
 }
 ```
+
+All operations fail with `Throwable`, which is whatever RocksDB raised (a `RocksDBException` for most storage errors).
+
+### Reading Several Keys at Once
+
+To fetch many keys in one call, use `RocksDB.multiGetAsList`. The result list lines up positionally with the keys that were passed in, with `None` for each missing key:
+
+```scala mdoc:compile-only
+import java.nio.charset.StandardCharsets.UTF_8
+import zio._
+import zio.rocksdb.RocksDB
+
+val lookup: ZIO[RocksDB, Throwable, List[Option[String]]] =
+  RocksDB
+    .multiGetAsList(List("a", "b", "c").map(_.getBytes(UTF_8)))
+    .map(_.map(_.map(new String(_, UTF_8))))
+```
+
+## Where to Go Next
+
+The rest of the documentation builds on the layer and the accessor methods shown above. [Serialization](./serialization.md) explains how to store domain types instead of raw bytes, [Iterators and Range Scans](./iterators.md) shows how to read ranges of keys as a stream, [Transactions](./transactions.md) covers `TransactionDB` for atomic multi-key updates, and [Write Batches](./write-batch.md) shows how to apply several writes atomically without a transaction.
