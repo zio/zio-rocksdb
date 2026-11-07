@@ -95,7 +95,7 @@ def scanPrefix(prefix: String): ZStream[RocksDB, Throwable, (String, String)] =
     .takeWhile { case (key, _) => key.startsWith(prefix) }
 ```
 
-With the example keys, `scanPrefix("b")` emits `b1` and `b2`. Because `takeWhile` ends the stream at the first key outside the prefix, the scan reads only one entry past the range.
+With the example keys, `scanPrefix("b")` emits `b1` and `b2`. Because `ZStream#takeWhile` ends the stream at the first key outside the prefix, the scan reads only one entry past the range.
 
 ## Reading Backward
 
@@ -125,7 +125,7 @@ With the example keys, `lastKeys(3)` returns `c1`, `b2` and `b1`.
 
 ## Scanning Column Families
 
-Each overload has a column family variant that takes a `ColumnFamilyHandle` first: `RocksDB.newIterator(cfHandle)` scans the whole family forward, and the service method `newIterator(cfHandle, direction, position)` takes a direction and a position like the default-family overload. `RocksDB.newIterators` scans several families at once and emits one pair of handle and entry stream for each, always forward from the first key:
+Each overload has a column family variant that takes a `ColumnFamilyHandle` first: `RocksDB.newIterator(cfHandle)` scans the whole family forward, and `RocksDB.newIterator(cfHandle, direction, position)` takes a direction and a position like the default-family overload. `RocksDB.newIterators` scans several families at once and emits one pair of handle and entry stream for each, always forward from the first key:
 
 ```scala mdoc:compile-only
 import org.rocksdb.ColumnFamilyHandle

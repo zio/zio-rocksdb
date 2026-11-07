@@ -10,7 +10,7 @@ keywords:
   - "binary encoding"
 ---
 
-RocksDB stores keys and values as raw bytes, so every `RocksDB` operation takes and returns `Array[Byte]`. In this guide we build encoders and decoders for domain types out of small, composable pieces: `Serializer`, `Deserializer` and `Serde`. By the end, you will have a typed `put` and `get` for a case class that converts to bytes and back without hand-written buffer code.
+RocksDB stores keys and values as raw bytes, so every `RocksDB` operation takes and returns `Array[Byte]`. In this guide we build encoders and decoders for domain types out of small, composable pieces: `Serializer`, `Deserializer` and `Serde`. By the end, you will have a typed `RocksDB.put` and `RocksDB.get` for a case class that converts to bytes and back without hand-written buffer code.
 
 We start with the primitive encoders that ship with the library, then compose them into larger ones, handle decoding failures, and finally connect the result to a database.
 
@@ -120,7 +120,7 @@ To build a serializer for `User` out of serializers for its fields, there are th
 
 - `Serializer#contramap` adapts a serializer to another type by converting the input first.
 - `Serializer#divide` pairs two serializers into a serializer of tuples that concatenates their output.
-- `Serializer#divideWith` is `divide` combined with a function that splits a value of another type into the two parts.
+- `Serializer#divideWith` is `Serializer#divide` combined with a function that splits a value of another type into the two parts.
 
 A string must carry its own length when it is followed by other fields, so we write a length-prefixed string serializer first:
 
@@ -254,7 +254,7 @@ A `Serde` bundles a serializer and a deserializer for the same type, so that a s
 val userSerde: Serde[Any, User] = Serde(userSerializer, userDeserializer)
 ```
 
-To connect it to a database, we write a typed `put` and a typed `get` on top of the byte-level `RocksDB` operations. The `get` turns a decoding failure into a `Throwable` so that it fits the `Task` returned by `RocksDB`:
+To connect it to a database, we write a typed `putUser` and a typed `getUser` on top of the byte-level `RocksDB` operations. The `getUser` function turns a decoding failure into a `Throwable` so that it fits the `Task` returned by `RocksDB`:
 
 ```scala mdoc:compile-only
 import zio._

@@ -16,13 +16,13 @@ We start with `TransactionDB.atomically`, which covers most uses, and then look 
 
 ## The Problem
 
-Moving money between two accounts is a read-modify-write cycle on two keys. With plain `RocksDB` operations, a failure after the first write leaves the accounts out of balance, and two concurrent transfers can both read the same balance and overwrite each other's result. The application cannot fix either problem on its own, because each `put` is independent and nothing holds a key between a `get` and the `put` that follows it.
+Moving money between two accounts is a read-modify-write cycle on two keys. With plain `RocksDB` operations, a failure after the first write leaves the accounts out of balance, and two concurrent transfers can both read the same balance and overwrite each other's result. The application cannot fix either problem on its own, because each `RocksDB.put` is independent and nothing holds a key between a `RocksDB.get` and the `RocksDB.put` that follows it.
 
 Transactions solve both: writes become visible only on commit, a failed transaction leaves no trace, and a key that is read for update stays locked until the transaction ends.
 
 ## Opening a TransactionDB
 
-`TransactionDB` extends `RocksDB`, so every operation from the [introduction](./index.md), including `get`, `put` and `newIterator`, also works on a `TransactionDB` layer. Build the layer with `TransactionDB.live`, passing `Options` and the database path, optionally with a `TransactionDBOptions` value in between. The database is closed when the layer's scope ends:
+`TransactionDB` extends `RocksDB`, so every operation from the [introduction](./index.md), including `RocksDB.get`, `RocksDB.put` and `RocksDB.newIterator`, also works on a `TransactionDB` layer. Build the layer with `TransactionDB.live`, passing `Options` and the database path, optionally with a `TransactionDBOptions` value in between. The database is closed when the layer's scope ends:
 
 ```scala mdoc:compile-only
 import org.rocksdb.{ Options, TransactionDBOptions }
@@ -66,13 +66,13 @@ def transfer(from: String, to: String, amount: Long): ZIO[TransactionDB, Throwab
   }
 ```
 
-When the program fails, the transaction is not committed, and none of its writes are applied. The error returned by `atomically` is the error of the program, whose type must be a supertype of `Throwable`. For example, writing a key and then failing leaves the previously stored value unchanged: the stored `v0` is still there after `atomically` returns the `RuntimeException`.
+When the program fails, the transaction is not committed, and none of its writes are applied. The error returned by `TransactionDB.atomically` is the error of the program, whose type must be a supertype of `Throwable`. For example, writing a key and then failing leaves the previously stored value unchanged: the stored `v0` is still there after `TransactionDB.atomically` returns the `RuntimeException`.
 
 Inside the transaction, reads see the transaction's own writes, and other readers do not see them until the commit. Reading the key with `RocksDB.get` while the transaction is open returns the old value.
 
 ## Choosing Between Overloads
 
-`atomically` has four overloads, which differ in two ways. Each exists with and without a `jrocks.WriteOptions` argument, for control over how the commit is written to disk, for example `new WriteOptions().setSync(true)`. And each exists for programs that need only `Transaction` and for programs that need `Transaction` plus other services:
+`TransactionDB.atomically` has four overloads, which differ in two ways. Each exists with and without a `jrocks.WriteOptions` argument, for control over how the commit is written to disk, for example `new WriteOptions().setSync(true)`. And each exists for programs that need only `Transaction` and for programs that need `Transaction` plus other services:
 
 ```scala mdoc:compile-only
 import org.rocksdb.WriteOptions
@@ -128,7 +128,7 @@ Running this program stores and returns `10`: no increment is lost. Without the 
 
 A transaction that asks for a key locked by another transaction waits for the lock. When the lock is not released within the lock timeout, the call fails with a `RocksDBException` whose message is `TimedOut(LockTimeout)`. The timeout comes from `TransactionDBOptions`, as in the options example above.
 
-Since `atomically` starts a fresh transaction on every run, retrying the whole call is safe. A retry policy on the `atomically` effect handles conflicts without any state to reset:
+Since `TransactionDB.atomically` starts a fresh transaction on every run, retrying the whole call is safe. A retry policy on the `TransactionDB.atomically` effect handles conflicts without any state to reset:
 
 ```scala mdoc:compile-only
 import zio._
@@ -140,7 +140,7 @@ def withRetries[A](update: ZIO[TransactionDB, Throwable, A]): ZIO[TransactionDB,
 
 ## Managing a Transaction by Hand
 
-When one transaction has to span several steps that `atomically` cannot wrap, `TransactionDB.beginTransaction` returns a `Transaction` that lives as long as the enclosing `Scope`. Nothing is committed automatically: the program calls `Transaction#commit` itself, or `Transaction#rollback` to discard the changes. Leaving the scope without a commit closes the transaction and discards its writes:
+When one transaction has to span several steps that `TransactionDB.atomically` cannot wrap, `TransactionDB.beginTransaction` returns a `Transaction` that lives as long as the enclosing `Scope`. Nothing is committed automatically: the program calls `Transaction#commit` itself, or `Transaction#rollback` to discard the changes. Leaving the scope without a commit closes the transaction and discards its writes:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8
@@ -158,7 +158,7 @@ def writeBoth(a: String, b: String): ZIO[TransactionDB, Throwable, Unit] =
   }
 ```
 
-The `Transaction` methods mirror the `Transaction` companion functions used in `atomically`, so the same code can be moved between the two styles. Each `Transaction` serializes its operations with a semaphore, so it is safe to use one from parallel fibers, for example with `<&>`:
+The `Transaction` methods mirror the `Transaction` companion functions used in `TransactionDB.atomically`, so the same code can be moved between the two styles. Each `Transaction` serializes its operations with a semaphore, so it is safe to use one from parallel fibers, for example with `<&>`:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8

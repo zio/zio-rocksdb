@@ -9,13 +9,13 @@ keywords:
   - "flushWal"
 ---
 
-A `WriteBatch` collects several writes and hands them to RocksDB in one call, so that they are applied atomically: after a crash, either all of them are visible or none are. In this guide we build a batch, write it to the database, and then look at the `flush` and `flushWal` operations that control when data reaches disk.
+A `WriteBatch` collects several writes and hands them to RocksDB in one call, so that they are applied atomically: after a crash, either all of them are visible or none are. In this guide we build a batch, write it to the database, and then look at the `RocksDB#flush` and `RocksDB#flushWal` operations that control when data reaches disk.
 
 A batch is lighter than a [transaction](./transactions.md): it takes no locks and cannot read, so it fits writes whose values are already known. When a write depends on a value read earlier, use a transaction instead.
 
 ## The Problem
 
-With plain `RocksDB.put`, every key is written separately. An application that stores a record under two keys, such as a user and an index entry that points to the user, has a window between the two calls in which a crash leaves a user without an index entry or an index entry without a user. Each `put` is atomic on its own, but the pair is not.
+With plain `RocksDB.put`, every key is written separately. An application that stores a record under two keys, such as a user and an index entry that points to the user, has a window between the two calls in which a crash leaves a user without an index entry or an index entry without a user. Each `RocksDB.put` call is atomic on its own, but the pair is not.
 
 ## Writing a Batch
 
@@ -63,7 +63,7 @@ def storeInBoth(first: ColumnFamilyHandle, second: ColumnFamilyHandle): ZIO[Rock
 ```
 
 :::note
-`WriteBatch` currently exposes only `put`. To delete keys atomically together with writes, use a [transaction](./transactions.md).
+`WriteBatch` currently exposes only `WriteBatch#put`. To delete keys atomically together with writes, use a [transaction](./transactions.md).
 :::
 
 ## Controlling Durability
@@ -81,4 +81,4 @@ val persist: ZIO[RocksDB, Throwable, Unit] =
   }
 ```
 
-`flush` also has variants that take one `ColumnFamilyHandle` or a list of them. To make a single write durable without a flush, pass `WriteOptions` with `setSync(true)` to `RocksDB#write` or to the transaction functions.
+`RocksDB#flush` also has variants that take one `ColumnFamilyHandle` or a list of them. To make a single write durable without a flush, pass `WriteOptions` with `setSync(true)` to `RocksDB#write` or to the transaction functions.
