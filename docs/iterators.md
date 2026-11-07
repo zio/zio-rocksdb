@@ -125,7 +125,7 @@ With the example keys, `lastKeys(3)` returns `c1`, `b2` and `b1`.
 
 ## Scanning Column Families
 
-Each overload has a column family variant that takes a `ColumnFamilyHandle` first: `RocksDB.newIterator(cfHandle)` scans the whole family forward, and `RocksDB.newIterator(cfHandle, direction, position)` takes a direction and a position like the default-family overload. `RocksDB.newIterators` scans several families at once and emits one pair of handle and entry stream for each, always forward from the first key:
+A `ColumnFamilyHandle` comes from `RocksDB.createColumnFamily`, which returns the handle of the family it creates. Each overload has a column family variant that takes a handle first: `RocksDB.newIterator(cfHandle)` scans the whole family forward, and `RocksDB.newIterator(cfHandle, direction, position)` takes a direction and a position like the default-family overload. `RocksDB.newIterators` scans several families at once and emits one pair of handle and entry stream for each, always forward from the first key:
 
 ```scala mdoc:compile-only
 import org.rocksdb.ColumnFamilyHandle
@@ -139,6 +139,10 @@ def countEntries(handles: List[ColumnFamilyHandle]): ZIO[RocksDB, Throwable, Lis
     .runCollect
     .map(_.toList)
 ```
+
+:::note
+Opening a database with column family descriptors does not return the handles through `RocksDB#initialHandles` yet, which is a known bug. Until it is fixed, obtain handles from `RocksDB.createColumnFamily`.
+:::
 
 ## Decoding Entries
 
