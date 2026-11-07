@@ -18,13 +18,13 @@ keywords:
 
 ZIO RocksDB covers the parts of the RocksDB API that an application touches most often:
 
-| Capability                         | Entry point                                    | Guide                                       |
-| ---------------------------------- | ---------------------------------------------- | ------------------------------------------- |
-| Reading and writing keys           | `RocksDB`                                      | This page                                   |
-| Typed keys and values              | `Serializer`, `Deserializer`, `Serde`          | [Serialization](./serialization.md)         |
-| Scanning and range queries         | `RocksDB#newIterator`                          | [Iterators and Range Scans](./iterators.md) |
-| Atomic multi-key updates           | `TransactionDB`, `Transaction`                 | [Transactions](./transactions.md)           |
-| Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`                  | [Write Batches](./write-batch.md)           |
+| Capability                          | Entry point                           | Guide                                       |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------- |
+| Reading and writing keys            | `RocksDB`                             | This page                                   |
+| Typed keys and values               | `Serializer`, `Deserializer`, `Serde` | [Serialization](./serialization.md)         |
+| Scanning and range queries          | `RocksDB#newIterator`                 | [Iterators and Range Scans](./iterators.md) |
+| Atomic multi-key updates            | `TransactionDB`, `Transaction`        | [Transactions](./transactions.md)           |
+| Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`         | [Write Batches](./write-batch.md)           |
 
 ## Installation
 

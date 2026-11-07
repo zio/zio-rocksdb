@@ -5,8 +5,11 @@ const sidebars = {
       label: "ZIO RocksDB",
       collapsed: false,
       link: { type: "doc", id: "index" },
-      items: [ 
-        "transaction-api" 
+      items: [
+        "serialization",
+        "iterators",
+        "transactions",
+        "write-batch"
       ]
     }
   ]
