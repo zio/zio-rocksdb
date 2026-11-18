@@ -1,7 +1,7 @@
 ---
 id: index
 title: "Introduction to ZIO RocksDB"
-sidebar_label: "ZIO RocksDB"
+sidebar_label: "Introduction"
 description: "ZIO RocksDB is a ZIO-native wrapper around the RocksDB embedded key-value store: layers, streaming iterators, transactions and typed serialization."
 keywords:
   - "RocksDB"
@@ -20,18 +20,22 @@ ZIO RocksDB covers the parts of the RocksDB API that an application touches most
 
 | Capability                          | Entry point                           | Guide                                       |
 | ----------------------------------- | ------------------------------------- | ------------------------------------------- |
-| Reading and writing keys            | `RocksDB`                             | This page                                   |
+| Reading and writing keys            | `RocksDB`                             | [Getting Started](./getting-started.md)     |
 | Typed keys and values               | `Serializer`, `Deserializer`, `Serde` | [Serialization](./serialization.md)         |
 | Scanning and range queries          | `RocksDB#newIterator`                 | [Iterators and Range Scans](./iterators.md) |
 | Atomic multi-key updates            | `TransactionDB`, `Transaction`        | [Transactions](./transactions.md)           |
 | Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`         | [Write Batches](./write-batch.md)           |
+| Column families                     | `RocksDB#createColumnFamily`          | [Column Families](./reference-column-families.md) |
 
 ## Installation
 
-To use the library, add the following line to `build.sbt`:
+ZIO RocksDB is a single artifact. Add it to `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-rocksdb" % "@VERSION@"
+libraryDependencies ++= Seq(
+  // ZIO RocksDB: JVM only, because it wraps the native RocksDB Java API
+  "dev.zio" %% "zio-rocksdb" % "@VERSION@"
+)
 ```
 
 The library is published for Scala 2.12, 2.13 and 3, requires ZIO 2, and runs on JDK 17 or newer. The native RocksDB binaries come with the `rocksdbjni` dependency, so no separate installation of RocksDB is needed.
@@ -103,4 +107,4 @@ val lookup: ZIO[RocksDB, Throwable, List[Option[String]]] =
 
 ## Where to Go Next
 
-The rest of the documentation builds on the layer and the accessor methods shown above. [Serialization](./serialization.md) explains how to store domain types instead of raw bytes, [Iterators and Range Scans](./iterators.md) shows how to read ranges of keys as a stream, [Transactions](./transactions.md) covers `TransactionDB` for atomic multi-key updates, and [Write Batches](./write-batch.md) shows how to apply several writes atomically without a transaction.
+[Getting Started](./getting-started.md) walks through a first program with typed values. The reference pages cover [the RocksDB service](./reference-rocksdb.md), [Column Families](./reference-column-families.md), [Serialization](./serialization.md), [Iterators and Range Scans](./iterators.md), [Transactions](./transactions.md), [the Transaction API](./reference-transaction-api.md) and [Write Batches](./write-batch.md). To learn by building, follow the [tutorial](./tutorial-user-store.md), and for a specific goal pick a [how-to guide](./how-to-use-column-families.md).
