@@ -42,26 +42,7 @@ The library is published for Scala 2.12, 2.13 and 3, requires ZIO 2, and runs on
 
 ## Getting Started
 
-Every operation in ZIO RocksDB takes and returns `Array[Byte]`, because that is what RocksDB stores. The examples below encode strings as UTF-8 by hand; to avoid this for richer types, see [Serialization](./serialization.md).
-
-### Opening a Database
-
-To open a database, build a `ZLayer` with `RocksDB.live`. The layer opens the database when the layer is built and closes it when the enclosing `Scope` ends, so the handle cannot leak. To create the database directory when it does not exist yet, pass an `Options` value with `setCreateIfMissing(true)`:
-
-```scala mdoc:compile-only
-import org.rocksdb.Options
-import zio._
-import zio.rocksdb.RocksDB
-
-val database: ZLayer[Any, Throwable, RocksDB] =
-  RocksDB.live(new Options().setCreateIfMissing(true), "/tmp/zio-rocksdb-intro")
-```
-
-`RocksDB.live(path)` is a shorthand that opens the database with RocksDB's default options.
-
-### Reading, Writing and Deleting Keys
-
-Once a `RocksDB` layer is available, the accessor methods on the `RocksDB` companion object write, read and delete keys. `RocksDB.get` returns `None` when the key does not exist:
+A database is a `ZLayer`: `RocksDB.live` opens it when the layer is built and closes it when the enclosing `Scope` ends. Keys and values are `Array[Byte]`, and `RocksDB.get` returns `None` when the key does not exist:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8
@@ -75,12 +56,9 @@ object IntroExample extends ZIOAppDefault {
 
   private val program: ZIO[RocksDB, Throwable, Unit] =
     for {
-      _       <- RocksDB.put(key, value)
-      found   <- RocksDB.get(key)
-      _       <- Console.printLine(found.map(new String(_, UTF_8)))
-      _       <- RocksDB.delete(key)
-      missing <- RocksDB.get(key)
-      _       <- Console.printLine(missing.isEmpty)
+      _     <- RocksDB.put(key, value)
+      found <- RocksDB.get(key)
+      _     <- Console.printLine(found.map(new String(_, UTF_8)))
     } yield ()
 
   def run =
@@ -88,22 +66,7 @@ object IntroExample extends ZIOAppDefault {
 }
 ```
 
-All operations fail with `Throwable`, which is whatever RocksDB raised (a `RocksDBException` for most storage errors).
-
-### Reading Several Keys at Once
-
-To fetch many keys in one call, use `RocksDB.multiGetAsList`. The result list lines up positionally with the keys passed in, with `None` for each missing key:
-
-```scala mdoc:compile-only
-import java.nio.charset.StandardCharsets.UTF_8
-import zio._
-import zio.rocksdb.RocksDB
-
-val lookup: ZIO[RocksDB, Throwable, List[Option[String]]] =
-  RocksDB
-    .multiGetAsList(List("a", "b", "c").map(_.getBytes(UTF_8)))
-    .map(_.map(_.map(new String(_, UTF_8))))
-```
+The [Getting Started](./getting-started.md) guide continues with typed values and scans.
 
 ## Where to Go Next
 
