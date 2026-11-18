@@ -36,9 +36,9 @@ There is no `live(path)` shorthand. Scoped, layer-free variants live in `Transac
 
 ## atomically
 
-`atomically` runs a program inside a new transaction and commits when the program succeeds. It exists in four overloads, with and without `WriteOptions`, and for programs that need only `Transaction` or `Transaction` plus other services. Both the service methods and the companion accessors have them:
+`atomically` runs a program inside a new transaction and commits when the program succeeds. It exists in four overloads, with and without `WriteOptions`, and for programs that need only `Transaction` or `Transaction` plus other services. Both the service methods and the companion accessors have them. The table shows the environment of the companion accessors; the service methods need only `Any` or `R`:
 
-| Overload                                                 | Environment of the result    |
+| Overload                                                 | Environment of the companion accessor's result |
 | -------------------------------------------------------- | ---------------------------- |
 | `atomically[E, A](zio: ZIO[Transaction, E, A])`          | `TransactionDB`              |
 | `atomically[E, A](writeOptions)(zio)`                    | `TransactionDB`              |

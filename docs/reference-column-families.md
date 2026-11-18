@@ -75,7 +75,7 @@ val database = RocksDB.liveAllColumnFamilies(new DBOptions(), new ColumnFamilyOp
 
 ## Per-family Operations
 
-Every operation that reads or writes has a variant with a `ColumnFamilyHandle` as the first argument:
+Most operations that read or write have a variant with a `ColumnFamilyHandle` as the first argument. `Transaction#get` is the exception:
 
 | Operation          | Variant                                         |
 | ------------------ | ----------------------------------------------- |
