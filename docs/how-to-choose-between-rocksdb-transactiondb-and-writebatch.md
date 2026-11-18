@@ -12,21 +12,23 @@ ZIO RocksDB offers three ways to write. They differ in what they guarantee and w
 
 ## Decide by the Question
 
-| If you need to...                                                     | Use                                         |
-| --------------------------------------------------------------------- | ------------------------------------------- |
-| write or read one key                                                 | `RocksDB.put`, `RocksDB.get`                |
-| write several keys with values you already know, all or nothing       | `WriteBatch` with `RocksDB#write`           |
-| read a value, then write based on it, without losing concurrent updates | `TransactionDB.atomically` with `getForUpdate` |
-| write and delete keys together                                        | `TransactionDB`, because `WriteBatch` only has `put` |
-| hold a key's lock across several steps                                | `TransactionDB.beginTransaction`            |
+| If you need to...                                                       | Use                                                        |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| write or read one key                                                   | `RocksDB.put`, `RocksDB.get`                               |
+| write several keys with values you already know, all or nothing         | `WriteBatch` with `RocksDB#write`                          |
+| read a value, then write based on it, without losing concurrent updates | `TransactionDB.atomically` with `Transaction.getForUpdate` |
+| write and delete keys together                                          | `TransactionDB`, because `WriteBatch` has no delete        |
+| hold a key's lock across several steps                                  | `TransactionDB.beginTransaction`                           |
 
 ## Costs
 
-`RocksDB` operations and batches take no locks, so they are the cheapest. A batch buffers its writes in memory until `RocksDB#write`. A `TransactionDB` takes a lock for every key read with `getForUpdate`, keeps the transaction's writes in memory until `commit`, and can fail with a lock timeout under contention; see [How to Retry on a Lock Timeout](./how-to-retry-on-lock-timeout.md).
+`RocksDB` operations and batches take no locks, so they are the cheapest. A batch buffers its writes in memory until `RocksDB#write`. A `TransactionDB` takes a lock for every key read with `Transaction#getForUpdate`, keeps the transaction's writes in memory until `Transaction#commit`, and can fail with a lock timeout under contention; see [How to Retry on a Lock Timeout](./how-to-retry-on-lock-timeout.md).
 
 ## TransactionDB Includes the Rest
 
 `TransactionDB` extends `RocksDB`, so a program that needs transactions in one place can use a `TransactionDB` layer for everything. The reverse does not hold: a `RocksDB` layer cannot run transactions.
+
+To see the subtyping at work, this function accepts a program that needs only `RocksDB` and runs it where a `TransactionDB` is provided:
 
 ```scala mdoc:compile-only
 import zio._
@@ -36,4 +38,4 @@ def readOnly(db: ZIO[RocksDB, Throwable, Unit]): ZIO[TransactionDB, Throwable, U
   db
 ```
 
-The function above compiles because a `TransactionDB` is a `RocksDB`. For the details of each tool, read [Write Batches](./write-batch.md) and [Transactions](./transactions.md).
+For the details of each tool, read [Write Batches](./write-batch.md) and [Transactions](./transactions.md).

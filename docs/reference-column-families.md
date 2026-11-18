@@ -73,20 +73,20 @@ import zio.rocksdb.RocksDB
 val database = RocksDB.liveAllColumnFamilies(new DBOptions(), new ColumnFamilyOptions(), "/tmp/zio-rocksdb-cf")
 ```
 
-## Per-family Operations
+## Per-Family Operations
 
 Most operations that read or write have a variant with a `ColumnFamilyHandle` as the first argument. `Transaction#get` is the exception:
 
-| Operation          | Variant                                         |
-| ------------------ | ----------------------------------------------- |
-| `put`              | `put(cfHandle, key, value)`                     |
-| `get`              | `get(cfHandle, key)`                            |
-| `delete`           | `delete(cfHandle, key)`                         |
-| `multiGetAsList`   | `multiGetAsList(handles, keys)`                 |
-| `newIterator`      | `newIterator(cfHandle)`, `newIterator(cfHandle, direction, position)`, `newIterators(handles)` |
-| `flush`            | `flush(options, cfHandle)`, `flush(options, handles)` |
-| `WriteBatch#put`   | `put(cfHandle, key, value)`                     |
-| `Transaction#put`, `getForUpdate`, `delete` | variants taking a handle first; `Transaction#get` has no column family variant |
+| Operation                                                           | Variant                                                                                        |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `RocksDB#put`                                                       | `put(cfHandle, key, value)`                                                                    |
+| `RocksDB#get`                                                       | `get(cfHandle, key)`                                                                           |
+| `RocksDB#delete`                                                    | `delete(cfHandle, key)`                                                                        |
+| `RocksDB#multiGetAsList`                                            | `multiGetAsList(handles, keys)`                                                                |
+| `RocksDB#newIterator`                                               | `newIterator(cfHandle)`, `newIterator(cfHandle, direction, position)`, `newIterators(handles)` |
+| `RocksDB#flush`                                                     | `flush(options, cfHandle)`, `flush(options, handles)`                                          |
+| `WriteBatch#put`                                                    | `put(cfHandle, key, value)`                                                                    |
+| `Transaction#put`, `Transaction#getForUpdate`, `Transaction#delete` | variants taking a handle first; `Transaction#get` has no column family variant                 |
 
 For example, a value written to one family is not visible in another:
 

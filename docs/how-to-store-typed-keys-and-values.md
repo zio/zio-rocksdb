@@ -47,7 +47,7 @@ Create the store from the `RocksDB` service:
 def layer[K: Tag, V: Tag](keys: Serde[Any, K], values: Serde[Any, V]): ZLayer[RocksDB, Nothing, TypedStore[K, V]] =
   ZLayer.fromZIO(ZIO.service[RocksDB].map(new TypedStore(keys, values, _)))
 
-val idToName: ZLayer[RocksDB, Nothing, TypedStore[Long, Long]] =
+val longStore: ZLayer[RocksDB, Nothing, TypedStore[Long, Long]] =
   layer(Serde(Serializer.long, Deserializer.long), Serde(Serializer.long, Deserializer.long))
 ```
 

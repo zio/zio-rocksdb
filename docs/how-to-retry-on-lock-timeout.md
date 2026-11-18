@@ -51,4 +51,4 @@ val database =
   )
 ```
 
-See [Transactions](./transactions.md) for how locks are taken with `getForUpdate`.
+See [Transactions](./transactions.md) for how locks are taken with `Transaction#getForUpdate`.

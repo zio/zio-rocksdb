@@ -45,4 +45,4 @@ To only look at the names, call `RocksDB.Live.listColumnFamilies(options, path)`
 
 ## Get the Handles
 
-Per-family calls need handles. Opening a database does not give them back reliably today: `RocksDB#initialHandles` is empty for a `RocksDB` opened with descriptors (it works for a `TransactionDB`). Until that is fixed, open the database, and create the families you need with `RocksDB.createColumnFamily`, as in [How to Use Column Families](./how-to-use-column-families.md).
+Per-family calls need handles. `RocksDB#initialHandles` returns an empty list for a `RocksDB` opened with descriptors, but returns the handles for a `TransactionDB`. For a `RocksDB`, create the families you need with `RocksDB.createColumnFamily` and keep the returned handles, as in [How to Use Column Families](./how-to-use-column-families.md).

@@ -11,7 +11,7 @@ To list all keys that start with a prefix, start a scan at the prefix and stop a
 
 ## Scan Forward from the Prefix
 
-`Position.Target` seeks to the first key that is greater than or equal to the prefix. Because keys are sorted bytewise, all keys with that prefix come next to each other, so `takeWhile` ends the scan right after the last one:
+`Position.Target` seeks to the first key that is greater than or equal to the prefix. Because keys are sorted bytewise, all keys with that prefix come next to each other, so `ZStream#takeWhile` ends the scan right after the last one:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8
@@ -31,7 +31,7 @@ def withPrefix(prefix: String): ZStream[RocksDB, Throwable, (String, String)] =
 
 ## Limit the Result
 
-Because the result is a stream, `take` stops the scan early and closes the native iterator, so reading the first page of a long prefix is cheap:
+Because the result is a stream, `ZStream#take` stops the scan early and closes the native iterator, so reading the first page of a long prefix is cheap:
 
 ```scala mdoc:compile-only
 import zio._
@@ -42,5 +42,5 @@ def firstPage(entries: ZStream[Any, Throwable, (String, String)]): ZIO[Any, Thro
 ```
 
 :::note
-`takeWhile` compares text. If your keys are binary, compare the bytes of the key instead, for example with `key.take(prefix.length).sameElements(prefix)`.
+`ZStream#takeWhile` compares text in this example. If your keys are binary, compare the bytes of the key instead, for example with `key.take(prefix.length).sameElements(prefix)`.
 :::

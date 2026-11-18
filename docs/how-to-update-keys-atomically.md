@@ -32,7 +32,7 @@ val program: ZIO[RocksDB, Throwable, Unit] =
 
 ## When You Read First: Transaction
 
-If the new value depends on the old one, open a `TransactionDB` and use `getForUpdate` so that no other writer changes the key in between. When the function fails, nothing is written:
+If the new value depends on the old one, open a `TransactionDB` and use `Transaction.getForUpdate` so that no other writer changes the key in between. When the function fails, nothing is written:
 
 ```scala mdoc:compile-only
 import zio._

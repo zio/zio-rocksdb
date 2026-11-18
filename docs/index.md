@@ -18,13 +18,13 @@ keywords:
 
 ZIO RocksDB covers the parts of the RocksDB API that an application touches most often:
 
-| Capability                          | Entry point                           | Guide                                       |
-| ----------------------------------- | ------------------------------------- | ------------------------------------------- |
-| Reading and writing keys            | `RocksDB`                             | [Getting Started](./getting-started.md)     |
-| Typed keys and values               | `Serializer`, `Deserializer`, `Serde` | [Serialization](./serialization.md)         |
-| Scanning and range queries          | `RocksDB#newIterator`                 | [Iterators and Range Scans](./iterators.md) |
-| Atomic multi-key updates            | `TransactionDB`, `Transaction`        | [Transactions](./transactions.md)           |
-| Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`         | [Write Batches](./write-batch.md)           |
+| Capability                          | Entry point                           | Guide                                             |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| Reading and writing keys            | `RocksDB`                             | [Getting Started](./getting-started.md)           |
+| Typed keys and values               | `Serializer`, `Deserializer`, `Serde` | [Serialization](./serialization.md)               |
+| Scanning and range queries          | `RocksDB#newIterator`                 | [Iterators and Range Scans](./iterators.md)       |
+| Atomic multi-key updates            | `TransactionDB`, `Transaction`        | [Transactions](./transactions.md)                 |
+| Atomic batched writes without locks | `WriteBatch`, `RocksDB#write`         | [Write Batches](./write-batch.md)                 |
 | Column families                     | `RocksDB#createColumnFamily`          | [Column Families](./reference-column-families.md) |
 
 ## Installation
@@ -92,7 +92,7 @@ All operations fail with `Throwable`, which is whatever RocksDB raised (a `Rocks
 
 ### Reading Several Keys at Once
 
-To fetch many keys in one call, use `RocksDB.multiGetAsList`. The result list lines up positionally with the keys that were passed in, with `None` for each missing key:
+To fetch many keys in one call, use `RocksDB.multiGetAsList`. The result list lines up positionally with the keys passed in, with `None` for each missing key:
 
 ```scala mdoc:compile-only
 import java.nio.charset.StandardCharsets.UTF_8

@@ -40,7 +40,7 @@ val testDatabase: ZLayer[Any, Throwable, RocksDB] =
 
 ## Use It in a Spec
 
-Provide the layer to the suite. Add `zio-test` to your test dependencies as usual:
+To run a spec against the database, add `zio-test` to your test dependencies and provide the layer to the suite with `Spec#provideShared`:
 
 ```scala
 import zio.test._
@@ -58,4 +58,4 @@ object StoreSpec extends ZIOSpecDefault {
 }
 ```
 
-`provideShared` builds the database once for the whole spec, which is faster; use `provide` for a fresh database per test.
+`Spec#provideShared` builds the database once for the whole spec, which is faster; use `Spec#provide` for a fresh database per test.

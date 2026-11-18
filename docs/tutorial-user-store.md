@@ -2,7 +2,7 @@
 id: tutorial-user-store
 title: "Tutorial: Building a User Store"
 sidebar_label: "Tutorial"
-description: "Build a small user store step by step: typed values, a column family, a prefix-free scan and an atomic credit transfer with ZIO RocksDB."
+description: "Build a small user store step by step: typed values, a column family, a full scan and an atomic credit transfer with ZIO RocksDB."
 keywords:
   - "RocksDB"
   - "tutorial"
@@ -91,7 +91,7 @@ val usersFamily: ZIO[TransactionDB, Throwable, ColumnFamilyHandle] =
 
 ## Step 3: Add and Read Users
 
-Both functions encode the id and the user, then call the per-family overloads of `put` and `get`:
+Both functions encode the id and the user, then call the per-family overloads of `TransactionDB.put` and `TransactionDB.get`:
 
 ```scala mdoc:silent
 def addUser(users: ColumnFamilyHandle, id: Long, user: User): ZIO[TransactionDB, Throwable, Unit] =
@@ -158,7 +158,7 @@ Keys are non-negative big-endian `Long` values here, so the scan returns the use
 
 ## The Complete Application
 
-Putting the steps together:
+To assemble the steps into a runnable application, we create the family, add two users, transfer credits and print every user:
 
 ```scala mdoc:compile-only
 object UserStore extends ZIOAppDefault {
@@ -179,6 +179,6 @@ Running it prints `(1,User(Ada,70))` and `(2,User(Grace,80))`.
 
 ## Where to Go Next
 
-- [How to Scan a Prefix](./how-to-scan-a-prefix.md) reads only the users whose key starts with a given prefix.
-- [How to Test with a Temporary Database](./how-to-test-with-a-temporary-database.md) turns this store into a testable unit.
+- [How to Scan a Prefix](./how-to-scan-a-prefix.md) shows how to read only the entries whose key starts with a given prefix.
+- [How to Test with a Temporary Database](./how-to-test-with-a-temporary-database.md) shows how to run tests against a real database in a temporary directory.
 - The [reference pages](./reference-rocksdb.md) list every operation used here.

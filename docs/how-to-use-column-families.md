@@ -11,7 +11,7 @@ A column family is a separate key space in one database. In this guide we create
 
 ## Create the Families
 
-Open a database and create the families at runtime. Keep the returned handles, because every per-family call needs one:
+Open a database and create the families at runtime. Keep the handles that `RocksDB.createColumnFamily` returns, because every per-family call needs one:
 
 ```scala mdoc:silent
 import java.nio.charset.StandardCharsets.UTF_8
