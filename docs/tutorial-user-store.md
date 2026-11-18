@@ -26,7 +26,7 @@ import zio._
 import zio.rocksdb._
 import zio.stream.ZStream
 
-final case class User(name: String, credits: Long)
+case class User(name: String, credits: Long)
 ```
 
 RocksDB stores bytes, so we need a `Serde[Any, User]`. The encoder writes the name with a length prefix, followed by the credits. The decoder reads them back in the same order. [Serialization](./serialization.md) explains each combinator:
@@ -74,11 +74,12 @@ Credit transfers need a transaction, so we open a `TransactionDB`. It extends `R
 
 ```scala mdoc:silent
 val database: ZLayer[Any, Throwable, TransactionDB] =
-  ZLayer.unwrap(
-    ZIO
-      .attempt(Files.createTempDirectory("zio-rocksdb-tutorial").toString)
-      .map(path => TransactionDB.live(new Options().setCreateIfMissing(true), path))
-  )
+  ZLayer.scoped {
+    for {
+      path <- ZIO.attempt(Files.createTempDirectory("zio-rocksdb-tutorial").toString)
+      db   <- TransactionDB.Live.open(new Options().setCreateIfMissing(true), path)
+    } yield db
+  }
 ```
 
 We keep the users in their own column family, so that other data can share the database without key collisions. Creating the family returns its handle, which every later call receives:
