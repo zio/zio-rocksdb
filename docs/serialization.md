@@ -113,7 +113,7 @@ run(Serializer.string("hello").flatMap(stringDeserializer.decode))
 We model the record we want to store as a case class:
 
 ```scala mdoc:silent
-final case class User(id: Long, name: String, active: Boolean)
+case class User(id: Long, name: String, active: Boolean)
 ```
 
 To build a serializer for `User` out of serializers for its fields, there are three combinators on `Serializer`:
@@ -260,7 +260,7 @@ To connect it to a database, we write a typed `putUser` and a typed `getUser` on
 import zio._
 import zio.rocksdb._
 
-final case class User(id: Long, name: String, active: Boolean)
+case class User(id: Long, name: String, active: Boolean)
 
 def userSerde: Serde[Any, User] = ???
 
