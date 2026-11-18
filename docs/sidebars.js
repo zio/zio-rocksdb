@@ -20,7 +20,7 @@ const sidebars = {
     {
       type: "category",
       label: "How-to Guides",
-      collapsed: true,
+      collapsed: false,
       items: [
         "how-to-use-column-families",
         "how-to-open-existing-column-families",
