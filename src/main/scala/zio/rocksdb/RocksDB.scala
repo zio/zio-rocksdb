@@ -42,7 +42,8 @@ trait RocksDB {
   def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
 
   /**
-   * Flush all memory table data
+   * Flushes the memory table of the default ColumnFamily to files, as configured by `flushOptions`. To flush
+   * other ColumnFamilies, pass their handles to the `flush` overloads that take a handle.
    */
   def flush(flushOptions: jrocks.FlushOptions): Task[Unit]
 
@@ -72,13 +73,9 @@ trait RocksDB {
   def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]]
 
   /**
-   * Retrieves the list of ColumnFamily handles the database was opened with.
-   *
-   * Caveats:
-   * - This list will only be populated if the database was opened with a specific list of
-   *   column families.
-   * - The list will not be updated if column families are added/removed while the database
-   *   is open.
+   * Returns the ColumnFamily handles held by this instance. Every `open` method of `RocksDB.Live` stores an empty
+   * list, including the methods that take ColumnFamily descriptors, so the result is always empty for an instance
+   * built by those methods.
    */
   def initialHandles: Task[List[jrocks.ColumnFamilyHandle]]
 
@@ -154,17 +151,19 @@ trait RocksDB {
   def put(key: Array[Byte], value: Array[Byte]): Task[Unit]
 
   /**
-   * Writes a key to a specific ColumnFamily in the database.
+   * Writes `value` under `key` in the ColumnFamily `cfHandle`.
    *
    * {{{
    * import zio._
    * import zio.rocksdb._
-   * import org.rocksdb.{ ColumnFamilyDescriptor, ColumnFamilyHandle }
+   * import org.rocksdb.ColumnFamilyDescriptor
    * import java.nio.charset.StandardCharsets.UTF_8
    *
-   * // Creates the "users" ColumnFamily and returns its handle.
-   * val users: RIO[RocksDB, ColumnFamilyHandle] =
-   *   RocksDB.createColumnFamily(new ColumnFamilyDescriptor("users".getBytes(UTF_8)))
+   * // Creates the "users" ColumnFamily, then writes one entry to it.
+   * val addUser: RIO[RocksDB, Unit] =
+   *   RocksDB.createColumnFamily(new ColumnFamilyDescriptor("users".getBytes(UTF_8))).flatMap { users =>
+   *     RocksDB.put(users, "id".getBytes(UTF_8), "ZIO".getBytes(UTF_8))
+   *   }
    * }}}
    */
   def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
@@ -211,8 +210,8 @@ trait RocksDB {
 object RocksDB extends Operations[RocksDB] {
 
   /**
-   * The `RocksDB` implementation over a `jrocks.RocksDB`. Each native call runs inside `ZIO.attempt`, so an
-   * exception thrown by the native library becomes a failure of the effect.
+   * The `RocksDB` implementation over a `jrocks.RocksDB`. Each read and write call to the native library runs
+   * inside `ZIO.attempt`, so an exception that the native library throws becomes a failure of the effect.
    */
   class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB {
 
@@ -277,7 +276,7 @@ object RocksDB extends Operations[RocksDB] {
       ZIO.attempt(Option(db.get(cfHandle, key)))
 
     /**
-     * Flushes the memory tables of all ColumnFamilies to files, as configured by `flushOptions`.
+     * Flushes the memory table of the default ColumnFamily to files, as configured by `flushOptions`.
      */
     def flush(flushOptions: jrocks.FlushOptions): Task[Unit] =
       ZIO.attempt(db.flush(flushOptions))
@@ -304,8 +303,8 @@ object RocksDB extends Operations[RocksDB] {
       ZIO.attempt(db.flushWal(sync))
 
     /**
-     * Returns the handles of the ColumnFamilies that the database was opened with. The list is empty when the
-     * database was opened without a list of ColumnFamily descriptors.
+     * Returns the ColumnFamily handles held by this instance. Every `open` method stores an empty list, including
+     * the methods that take ColumnFamily descriptors, so the result is always empty for an instance built by them.
      */
     def initialHandles: Task[List[jrocks.ColumnFamilyHandle]] =
       ZIO.succeed(cfHandles)
@@ -464,8 +463,8 @@ object RocksDB extends Operations[RocksDB] {
     }
 
     /**
-     * Opens the database at `path` with every ColumnFamily that the database directory lists. Each ColumnFamily
-     * uses `columnFamilyOptions`.
+     * Opens the database at `path` with every ColumnFamily that the database directory lists. `columnFamilyOptions`
+     * is used only to list the ColumnFamilies. Each ColumnFamily is opened with default `ColumnFamilyOptions`.
      */
     def openAllColumnFamilies(
       options: jrocks.DBOptions,

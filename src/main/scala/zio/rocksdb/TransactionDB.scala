@@ -162,8 +162,8 @@ object TransactionDB extends Operations[TransactionDB] {
       open(new jrocks.Options(), path)
 
     /**
-     * Opens the database at `path` with every ColumnFamily that the database directory lists. Each ColumnFamily
-     * uses `columnFamilyOptions`.
+     * Opens the database at `path` with every ColumnFamily that the database directory lists. `columnFamilyOptions`
+     * is used only to list the ColumnFamilies. Each ColumnFamily is opened with default `ColumnFamilyOptions`.
      */
     def openAllColumnFamilies(
       options: jrocks.DBOptions,

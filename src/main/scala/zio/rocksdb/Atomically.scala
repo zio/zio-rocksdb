@@ -2,14 +2,15 @@ package zio.rocksdb
 
 /**
  * Marker types for the `TransactionDB.atomically` overloads. Each overload takes one marker as an implicit
- * parameter, which lets the compiler choose between overloads whose parameter types differ only in the
- * environment type of the program.
+ * parameter. The markers give overloads that differ only in the environment type of the program different
+ * erased signatures, so that all of them can be defined.
  */
 object Atomically {
 
   /**
-   * Marker for a program whose environment is only `Transaction`. `atomically` with this marker returns a
-   * program whose environment is `Any`.
+   * Marker for a program whose environment is only `Transaction`. The `atomically` method of a `TransactionDB`
+   * instance with this marker returns a program whose environment is `Any`. The accessor on the `TransactionDB`
+   * companion object returns a program that needs only a `TransactionDB`.
    */
   object TransactionOnly { implicit val transactionOnly: TransactionOnly = this }
 

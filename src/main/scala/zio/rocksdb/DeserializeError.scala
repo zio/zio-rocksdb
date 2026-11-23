@@ -17,8 +17,8 @@ object DeserializeError {
   final case class ChunkError(underlying: Throwable) extends DeserializeError(underlying.getMessage)
 
   /**
-   * The input has fewer bytes than the decoder needs. `got` is the length of the whole input, and `expected`
-   * is the number of bytes the decoder needs.
+   * The input has fewer bytes than the decoder needs. `got` is the number of bytes that the failing decoder
+   * received, and `expected` is the number of bytes it needs.
    */
   final case class TooShort(got: Int, expected: Int)
       extends DeserializeError(s"chunk too short, was $got, expected: $expected")

@@ -75,7 +75,7 @@ object Serializer extends CollectionSerializers with TupleSerializers {
 
   /**
    * Returns a serializer that ignores its input and always encodes `a` with `enc`. The value `a` is evaluated
-   * each time the serializer runs.
+   * each time `apply` is called.
    */
   def const[R, A](a: => A)(enc: Serializer[R, A]): Serializer[R, A] =
     Serializer[R, A](_ => enc(a))

@@ -658,8 +658,9 @@ private[rocksdb] trait DeserializerUtilityFunctions {
     }
 
   /**
-   * Decodes elements with `deser` from `bytes` until `deser` fails with `DeserializeError.TooShort`. Returns
-   * the decoded elements in a `Chunk`, with the bytes that were not read as the remainder.
+   * Decodes elements with `deser` from `bytes.value` until `deser` fails with `DeserializeError.TooShort`. Returns
+   * the decoded elements in a `Chunk`. The remainder is the part of `bytes.value` that was not read. The
+   * `remainder` of `bytes` is dropped.
    */
   def fromByteBuffer[R, A](
     deser: Deserializer[R, A]
