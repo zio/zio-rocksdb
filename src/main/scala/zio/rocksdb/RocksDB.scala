@@ -399,9 +399,10 @@ object RocksDB extends Operations[RocksDB] {
 
     /**
      * Streams each ColumnFamily in `cfHandles` as a pair of its handle and a stream of its entries. The pairs
-     * come in the order of `cfHandles`, and each inner stream starts at the first key in ascending order. The
-     * iterators are closed when the outer stream ends, so each inner stream must be consumed while the outer
-     * stream runs.
+     * come in the order of `cfHandles`, and each inner stream starts at the first key in ascending order.
+     * Each inner stream reads a native iterator that is closed when the outer stream ends, so run the inner
+     * streams while the outer stream is running (for example inside `mapZIO` or `flatMap`), not after
+     * collecting the outer stream.
      */
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
