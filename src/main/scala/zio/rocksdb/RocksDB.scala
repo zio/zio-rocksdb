@@ -9,6 +9,26 @@ import zio.stream.{ Stream, ZStream }
 import java.nio.charset.StandardCharsets
 import scala.jdk.CollectionConverters._
 
+/**
+ * The RocksDB service: a key-value store that can hold several ColumnFamilies. Build a layer with
+ * `RocksDB.live`, which opens the database and closes it when the layer's scope closes. Methods that read or
+ * write return a `Task`, and methods that iterate return a `ZStream`. Every failure is a `Throwable`.
+ *
+ * {{{
+ * import zio._
+ * import zio.rocksdb._
+ * import java.nio.charset.StandardCharsets.UTF_8
+ *
+ * // Writes one key and reads it back from the RocksDB service in the environment.
+ * val program: RIO[RocksDB, Option[String]] =
+ *   for {
+ *     _     <- RocksDB.put("name".getBytes(UTF_8), "ZIO".getBytes(UTF_8))
+ *     value <- RocksDB.get("name".getBytes(UTF_8))
+ *   } yield value.map(new String(_, UTF_8))
+ * }}}
+ *
+ * @see [[https://zio.dev/zio-rocksdb/ ZIO RocksDB]]
+ */
 trait RocksDB {
 
   /**
@@ -22,7 +42,8 @@ trait RocksDB {
   def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit]
 
   /**
-   * Flush all memory table data
+   * Flushes the memory table of the default ColumnFamily to files, as configured by `flushOptions`. To flush
+   * other ColumnFamilies, pass their handles to the `flush` overloads that take a handle.
    */
   def flush(flushOptions: jrocks.FlushOptions): Task[Unit]
 
@@ -52,13 +73,9 @@ trait RocksDB {
   def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]]
 
   /**
-   * Retrieves the list of ColumnFamily handles the database was opened with.
-   *
-   * Caveats:
-   * - This list will only be populated if the database was opened with a specific list of
-   *   column families.
-   * - The list will not be updated if column families are added/removed while the database
-   *   is open.
+   * Returns the ColumnFamily handles held by this instance. Every `open` method of `RocksDB.Live` stores an empty
+   * list, including the methods that take ColumnFamily descriptors, so the result is always empty for an instance
+   * built by those methods.
    */
   def initialHandles: Task[List[jrocks.ColumnFamilyHandle]]
 
@@ -84,6 +101,21 @@ trait RocksDB {
 
   /**
    * Scans the default ColumnFamily in the database and emits the results as a `ZStream`.
+   *
+   * {{{
+   * import zio._
+   * import zio.rocksdb._
+   * import zio.rocksdb.iterator._
+   * import zio.stream.ZStream
+   * import java.nio.charset.StandardCharsets.UTF_8
+   *
+   * // Streams the keys from "b" upward, in ascending order.
+   * val keysFromB: ZStream[RocksDB, Throwable, String] =
+   *   ZStream.serviceWithStream[RocksDB](
+   *     _.newIterator(Direction.Forward, Position.Target(Chunk.fromArray("b".getBytes(UTF_8))))
+   *       .map { case (key, _) => new String(key, UTF_8) }
+   *   )
+   * }}}
    */
   def newIterator(
     direction: Direction,
@@ -119,7 +151,20 @@ trait RocksDB {
   def put(key: Array[Byte], value: Array[Byte]): Task[Unit]
 
   /**
-   * Writes a key to a specific ColumnFamily in the database.
+   * Writes `value` under `key` in the ColumnFamily `cfHandle`.
+   *
+   * {{{
+   * import zio._
+   * import zio.rocksdb._
+   * import org.rocksdb.ColumnFamilyDescriptor
+   * import java.nio.charset.StandardCharsets.UTF_8
+   *
+   * // Creates the "users" ColumnFamily, then writes one entry to it.
+   * val addUser: RIO[RocksDB, Unit] =
+   *   RocksDB.createColumnFamily(new ColumnFamilyDescriptor("users".getBytes(UTF_8))).flatMap { users =>
+   *     RocksDB.put(users, "id".getBytes(UTF_8), "ZIO".getBytes(UTF_8))
+   *   }
+   * }}}
    */
   def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit]
 
@@ -153,62 +198,128 @@ trait RocksDB {
    */
   def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit]
 
+  /**
+   * Applies the writes in `writeBatch` to the database as one batch, with `writeOptions`.
+   */
   def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit]
 }
 
+/**
+ * Constructors for the `RocksDB` service, and the operations that read the service from the ZIO environment.
+ */
 object RocksDB extends Operations[RocksDB] {
+
+  /**
+   * The `RocksDB` implementation over a `jrocks.RocksDB`. Each read and write call to the native library runs
+   * inside `ZIO.attempt`, so an exception that the native library throws becomes a failure of the effect.
+   */
   class Live protected (db: jrocks.RocksDB, cfHandles: List[jrocks.ColumnFamilyHandle]) extends RocksDB {
 
+    /**
+     * Creates a ColumnFamily from `columnFamilyDescriptor` and returns its handle.
+     */
     def createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): Task[ColumnFamilyHandle] =
       ZIO.attempt(db.createColumnFamily(columnFamilyDescriptor))
 
+    /**
+     * Creates a ColumnFamily for each descriptor and returns their handles, in the same order.
+     */
     def createColumnFamilies(
       columnFamilyDescriptors: List[ColumnFamilyDescriptor]
     ): Task[List[ColumnFamilyHandle]] =
       ZIO.attempt(db.createColumnFamilies(columnFamilyDescriptors.asJava).asScala.toList)
 
+    /**
+     * Creates a ColumnFamily for each name, with `columnFamilyOptions`, and returns their handles, in the same
+     * order.
+     */
     def createColumnFamilies(
       columnFamilyOptions: ColumnFamilyOptions,
       columnFamilyNames: List[Array[Byte]]
     ): Task[List[ColumnFamilyHandle]] =
       ZIO.attempt(db.createColumnFamilies(columnFamilyOptions, columnFamilyNames.asJava).asScala.toList)
 
+    /**
+     * Deletes `key` from the default ColumnFamily.
+     */
     def delete(key: Array[Byte]): Task[Unit] =
       ZIO.attempt(db.delete(key))
 
+    /**
+     * Deletes `key` from the ColumnFamily `cfHandle`.
+     */
     def delete(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Unit] =
       ZIO.attempt(db.delete(cfHandle, key))
 
+    /**
+     * Deletes the ColumnFamily that `columnFamilyHandle` refers to.
+     */
     def dropColumnFamily(columnFamilyHandle: ColumnFamilyHandle): Task[Unit] =
       ZIO.attempt(db.dropColumnFamily(columnFamilyHandle))
 
+    /**
+     * Deletes each ColumnFamily that the handles in `columnFamilyHandles` refer to.
+     */
     def dropColumnFamilies(columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit] =
       ZIO.attempt(db.dropColumnFamilies(columnFamilyHandles.asJava))
 
+    /**
+     * Returns the value stored under `key` in the default ColumnFamily, or `None` when the key is missing.
+     */
     def get(key: Array[Byte]): Task[Option[Array[Byte]]] =
       ZIO.attempt(Option(db.get(key)))
 
+    /**
+     * Returns the value stored under `key` in the ColumnFamily `cfHandle`, or `None` when the key is missing.
+     */
     def get(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte]): Task[Option[Array[Byte]]] =
       ZIO.attempt(Option(db.get(cfHandle, key)))
 
+    /**
+     * Flushes the memory table of the default ColumnFamily to files, as configured by `flushOptions`.
+     */
     def flush(flushOptions: jrocks.FlushOptions): Task[Unit] =
       ZIO.attempt(db.flush(flushOptions))
 
+    /**
+     * Flushes the memory table of the ColumnFamily `columnFamilyHandle` to files, as configured by
+     * `flushOptions`.
+     */
     def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandle: jrocks.ColumnFamilyHandle): Task[Unit] =
       ZIO.attempt(db.flush(flushOptions, columnFamilyHandle))
 
+    /**
+     * Flushes the memory tables of the ColumnFamilies in `columnFamilyHandles` to files, as configured by
+     * `flushOptions`.
+     */
     def flush(flushOptions: jrocks.FlushOptions, columnFamilyHandles: List[ColumnFamilyHandle]): Task[Unit] =
       ZIO.attempt(db.flush(flushOptions, columnFamilyHandles.asJava))
 
+    /**
+     * Writes the buffered write-ahead log to the file system. When `sync` is `true`, the file is also synced to
+     * storage.
+     */
     def flushWal(sync: Boolean): Task[Unit] =
       ZIO.attempt(db.flushWal(sync))
 
+    /**
+     * Returns the ColumnFamily handles held by this instance. Every `open` method stores an empty list, including
+     * the methods that take ColumnFamily descriptors, so the result is always empty for an instance built by them.
+     */
     def initialHandles: Task[List[jrocks.ColumnFamilyHandle]] =
       ZIO.succeed(cfHandles)
 
+    /**
+     * Reads each key from the default ColumnFamily. The result has one entry for each key, in the same order as
+     * `keys`, and an entry is `None` when its key is missing.
+     */
     def multiGetAsList(keys: List[Array[Byte]]): Task[List[Option[Array[Byte]]]] =
       ZIO.attempt(db.multiGetAsList(keys.asJava).asScala.toList.map(Option(_)))
 
+    /**
+     * Reads each key from the ColumnFamily at the same position in `handles`. The result has one entry for each
+     * key, in the same order as `keys`, and an entry is `None` when its key is missing.
+     */
     def multiGetAsList(
       handles: List[jrocks.ColumnFamilyHandle],
       keys: List[Array[Byte]]
@@ -247,6 +358,10 @@ object RocksDB extends Operations[RocksDB] {
         case Direction.Backward => it.prev()
       }
 
+    /**
+     * Streams the entries of the default ColumnFamily in `direction`, starting at `position`. See
+     * `zio.rocksdb.iterator.Position` for the starting points.
+     */
     def newIterator(
       direction: Direction,
       position: Position
@@ -255,14 +370,24 @@ object RocksDB extends Operations[RocksDB] {
         .acquireReleaseWith(ZIO.attempt(db.newIterator()))(it => ZIO.succeed(it.close()))
         .flatMap(drainIterator(direction, position))
 
+    /**
+     * Streams the entries of the default ColumnFamily in ascending key order, starting at the first key.
+     */
     def newIterator: Stream[Throwable, (Array[Byte], Array[Byte])] =
       newIterator(Direction.Forward, Position.First)
 
+    /**
+     * Streams the entries of the ColumnFamily `cfHandle` in ascending key order, starting at the first key.
+     */
     def newIterator(cfHandle: jrocks.ColumnFamilyHandle): Stream[Throwable, (Array[Byte], Array[Byte])] =
       ZStream
         .acquireReleaseWith(ZIO.attempt(db.newIterator(cfHandle)))(it => ZIO.succeed(it.close()))
         .flatMap(drainIterator(Direction.Forward, Position.First))
 
+    /**
+     * Streams the entries of the ColumnFamily `cfHandle` in `direction`, starting at `position`. See
+     * `zio.rocksdb.iterator.Position` for the starting points.
+     */
     def newIterator(
       cfHandle: ColumnFamilyHandle,
       direction: Direction,
@@ -272,6 +397,13 @@ object RocksDB extends Operations[RocksDB] {
         .acquireReleaseWith(ZIO.attempt(db.newIterator(cfHandle)))(it => ZIO.succeed(it.close()))
         .flatMap(drainIterator(direction, position))
 
+    /**
+     * Streams each ColumnFamily in `cfHandles` as a pair of its handle and a stream of its entries. The pairs
+     * come in the order of `cfHandles`, and each inner stream starts at the first key in ascending order.
+     * Each inner stream reads a native iterator that is closed when the outer stream ends, so run the inner
+     * streams while the outer stream is running (for example inside `mapZIO` or `flatMap`), not after
+     * collecting the outer stream.
+     */
     def newIterators(
       cfHandles: List[jrocks.ColumnFamilyHandle]
     ): Stream[Throwable, (jrocks.ColumnFamilyHandle, Stream[Throwable, (Array[Byte], Array[Byte])])] =
@@ -285,21 +417,41 @@ object RocksDB extends Operations[RocksDB] {
           }
         }
 
+    /**
+     * Writes `value` under `key` in the default ColumnFamily.
+     */
     def put(key: Array[Byte], value: Array[Byte]): Task[Unit] =
       ZIO.attempt(db.put(key, value))
 
+    /**
+     * Writes `value` under `key` in the ColumnFamily `cfHandle`.
+     */
     def put(cfHandle: jrocks.ColumnFamilyHandle, key: Array[Byte], value: Array[Byte]): Task[Unit] =
       ZIO.attempt(db.put(cfHandle, key, value))
 
+    /**
+     * Applies the writes in `writeBatch` to the database as one batch, with `writeOptions`.
+     */
     def write(writeOptions: jrocks.WriteOptions, writeBatch: WriteBatch): Task[Unit] =
       ZIO.attempt(db.write(writeOptions, writeBatch.getUnderlying))
   }
 
+  /**
+   * Constructors for `RocksDB.Live`. Each `open` method returns a scoped `RocksDB` that closes the database when
+   * the scope closes.
+   */
   object Live {
 
+    /**
+     * Returns the names of the ColumnFamilies stored in the database at `path`, as raw bytes.
+     */
     def listColumnFamilies(options: jrocks.Options, path: String): Task[List[Array[Byte]]] =
       ZIO.attempt(jrocks.RocksDB.listColumnFamilies(options, path).asScala.toList)
 
+    /**
+     * Opens the database at `path` with the ColumnFamilies in `cfDescriptors`, and closes it when the scope
+     * closes.
+     */
     def open(
       options: jrocks.DBOptions,
       path: String,
@@ -311,6 +463,10 @@ object RocksDB extends Operations[RocksDB] {
       make(db, handles.asScala.toList)
     }
 
+    /**
+     * Opens the database at `path` with every ColumnFamily that the database directory lists. `columnFamilyOptions`
+     * is used only to list the ColumnFamilies. Each ColumnFamily is opened with default `ColumnFamilyOptions`.
+     */
     def openAllColumnFamilies(
       options: jrocks.DBOptions,
       columnFamilyOptions: jrocks.ColumnFamilyOptions,
@@ -326,9 +482,15 @@ object RocksDB extends Operations[RocksDB] {
         live           <- open(options, path, columnFamilies)
       } yield live
 
+    /**
+     * Opens the database at `path` with default options, and closes it when the scope closes.
+     */
     def open(path: String): ZIO[Scope, Throwable, RocksDB] =
       make(ZIO.attempt(jrocks.RocksDB.open(path)), Nil)
 
+    /**
+     * Opens the database at `path` with `options`, and closes it when the scope closes.
+     */
     def open(options: jrocks.Options, path: String): ZIO[Scope, Throwable, RocksDB] =
       make(ZIO.attempt(jrocks.RocksDB.open(options, path)), Nil)
 
