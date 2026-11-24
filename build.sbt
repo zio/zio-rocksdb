@@ -1,3 +1,5 @@
+import zio.sbt.githubactions.DependencyBot
+
 val mainScala = "2.12.20"
 val allScala  = Seq(mainScala, "2.13.15", "3.3.4")
 
@@ -37,6 +39,7 @@ ThisBuild / ciTargetJavaVersions := Seq("17", "21", "25")
 ThisBuild / ciDefaultJavaVersion := "17"
 ThisBuild / ciEnableScalaSteward := false
 ThisBuild / ciEnableDependabot := false
+ThisBuild / ciDependencyUpdateBots += DependencyBot.Custom("zio-assistant[bot]")
 ThisBuild / ciCheckArtifactsBuildSteps := Seq.empty
 scalafmtOnCompile := true
 

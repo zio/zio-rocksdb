@@ -32,10 +32,8 @@ ZIO RocksDB covers the parts of the RocksDB API that an application touches most
 ZIO RocksDB is a single artifact. Add it to `build.sbt`:
 
 ```scala
-libraryDependencies ++= Seq(
-  // ZIO RocksDB: JVM only, because it wraps the native RocksDB Java API
-  "dev.zio" %% "zio-rocksdb" % "@VERSION@"
-)
+// ZIO RocksDB: JVM only, because it wraps the native RocksDB Java API
+libraryDependencies += "dev.zio" %% "zio-rocksdb" % "@VERSION@"
 ```
 
 The library is published for Scala 2.12, 2.13 and 3, requires ZIO 2, and runs on JDK 17 or newer. The native RocksDB binaries come with the `rocksdbjni` dependency, so no separate installation of RocksDB is needed.
